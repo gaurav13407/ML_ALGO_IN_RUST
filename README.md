@@ -72,8 +72,10 @@ use ML_ALGO_Rewite::{data, preprocess, split, linear};
 use ndarray::{Array1, Array2};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load data
-    let (x, y) = data::load_csv("data.csv", 3)?;
+    // Load data from CSV or Excel
+    let (x, y) = data::load_csv_by_name("data.csv", "target")?;
+    // or from Excel:
+    // let (x, y) = data::load_excel_by_name("data.xlsx", "target", None)?;
     
     // Split data
     let (x_train, x_test, y_train, y_test) = 
@@ -133,12 +135,25 @@ ML_ALGO_Rewite/
 
 ### `data` - Data Loading
 ```rust
+// CSV Loading
 pub fn load_csv(path: &str, target_column: usize) 
     -> Result<(Array2<f64>, Array1<f64>), Box<dyn Error>>
+
+pub fn load_csv_by_name(path: &str, target_column_name: &str) 
+    -> Result<(Array2<f64>, Array1<f64>), Box<dyn Error>>
+
+// Excel Loading (.xlsx)
+pub fn load_excel(path: &str, target_column: usize, sheet_name: Option<&str>) 
+    -> Result<(Array2<f64>, Array1<f64>), Box<dyn Error>>
+
+pub fn load_excel_by_name(path: &str, target_column_name: &str, sheet_name: Option<&str>) 
+    -> Result<(Array2<f64>, Array1<f64>), Box<dyn Error>>
 ```
-- Loads CSV files
+- Loads CSV and Excel (.xlsx) files
 - Automatically handles missing values (converts to NaN)
 - Separates features and target variable
+- Column selection by index or name
+- For Excel: specify sheet name or use first sheet by default
 
 ### `preprocess` - Data Preprocessing
 ```rust
@@ -211,11 +226,29 @@ Benchmarks on California Housing dataset (20,640 samples, 8 features):
 
 ## 🔬 Example: Custom Dataset
 
+### CSV Files
 Replace the dataset by modifying the binary:
 
 ```rust
-let path = "your_data.csv";
-let target_column_index = 5; // Index of target column
+// Using column index
+let (x, y) = data::load_csv("your_data.csv", 5)?;
+
+// Using column name (recommended)
+let (x, y) = data::load_csv_by_name("your_data.csv", "target_column_name")?;
+```
+
+### Excel Files (.xlsx)
+Load data from Excel files:
+
+```rust
+// Using column name with default (first) sheet
+let (x, y) = data::load_excel_by_name("housing_data.xlsx", "price", None)?;
+
+// Using column name with specific sheet
+let (x, y) = data::load_excel_by_name("housing_data.xlsx", "price", Some("Sheet1"))?;
+
+// Using column index
+let (x, y) = data::load_excel("housing_data.xlsx", 8, None)?;
 ```
 
 The pipeline automatically handles:
@@ -223,6 +256,7 @@ The pipeline automatically handles:
 - Feature scaling
 - Model training and evaluation
 - Model persistence
+- CSV and Excel formats (.csv, .xlsx)
 
 ## 🛠️ Development
 

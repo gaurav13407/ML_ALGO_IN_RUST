@@ -12,7 +12,7 @@ from sklearn.datasets import make_regression
 from sklearn.impute import SimpleImputer
 
 #-----Config---------
-CSV_PATH = r"../examples/Linear_regression_1.csv"
+CSV_PATH = r"examples/Linear_regression_1.csv"  # Path from project root
 TARGET_COL = "median_house_value"
 Test_Size = 0.2
 RANDOM_STATE = 42
@@ -21,7 +21,13 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 #-----Load Data--------
 if CSV_PATH:
-    df = pd.read_csv(CSV_PATH)
+    # Read CSV and treat '?' as missing values (NaN)
+    df = pd.read_csv(CSV_PATH, na_values=['?', '', ' ', 'NA', 'null'])
+    # Convert all columns except target to numeric, forcing errors to NaN
+    for col in df.columns:
+        if col != TARGET_COL:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
     X = df.drop(columns=[TARGET_COL]).values
     y = df[TARGET_COL].values
 else:

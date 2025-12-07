@@ -14,13 +14,13 @@ fn arr_mean(a: &Array1<f64>) -> f64 {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = "examples/Linear_regression_1.csv";
-    let target_column_index = 8; // median_house_value is the last column (index 8)
+    let path = "examples/Linear_refression_6.xlsx";
+    let target_column_name = "Volume"; // Use column name instead of index!
     let test_size = 0.2;
     let seed: u64 = 42;
     
-    // --- load csv ---
-    let (x, y): (Array2<f64>, Array1<f64>) = data::load_csv(path, target_column_index)?;
+    // --- load excel by column name ---
+    let (x, y): (Array2<f64>, Array1<f64>) = data::load_excel_by_name(path, target_column_name, None)?;
     println!("Loaded X Shaped:{:?}, y.len {}", x.dim(), y.len());
     
     // ---- splitting the dataset -----
