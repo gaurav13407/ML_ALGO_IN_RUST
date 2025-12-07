@@ -15,9 +15,21 @@ pub fn load_csv(path:&str,target_column:usize)->Result<(Array2<f64>,Array1<f64>)
                 return Err(format!("Csv Parser error at record {} :{}!",line_num+1,e).into())}};
 
         let mut row_vals:Vec<f64> = Vec::new();
+        
         for field in record.iter(){
-            row_vals.push(field.parse::<f64>()?);
+            let trimmed = field.trim();
+            // Parse empty values as NaN
+            let val = if trimmed.is_empty() {
+                f64::NAN
+            } else {
+                match trimmed.parse::<f64>() {
+                    Ok(v) => v,
+                    Err(_) => f64::NAN,
+                }
+            };
+            row_vals.push(val);
         }
+        
         if target_column>=row_vals.len(){
             return Err(format!("Target Column {} out of range at line {}",target_column,line_num).into());
         }

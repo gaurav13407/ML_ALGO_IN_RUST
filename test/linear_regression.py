@@ -32,7 +32,7 @@ else:
 
 #--------Split---------
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=Test_Size, random_state=RANDOM_STATE
+    X, y, test_size=Test_Size, random_state=RANDOM_STATE,shuffle=False
 )
 
 #----Pipeline--------
@@ -60,6 +60,17 @@ print(f"MSE        : {mse:.4f}")
 print(f"R2_score   : {r2:.4f}")
 print(f"Train Time : {train_time:.3f} ms")
 print(f"Predict Time: {predict_time:.3f} ms")
+
+print("Python total rows (X):", len(X))
+print("Python X_test shape:", X_test.shape)
+print("Python y_test len:", len(y_test))
+print("Python y_test stats: mean, min, max, var:", np.mean(y_test), np.min(y_test), np.max(y_test), np.var(y_test))
+print("First 10 Python (y_test, y_pred):")
+for i in range(min(10, len(y_test))):
+    print(i, y_test[i], y_pred[i])
+
+print("Python MSE:", mean_squared_error(y_test, y_pred))
+print("Python R2:", r2_score(y_test, y_pred))
 
 #---------Save Model----------
 joblib.dump(pipe, os.path.join(OUT_DIR, "linear_model.joblib"))

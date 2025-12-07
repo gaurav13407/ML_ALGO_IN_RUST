@@ -1,45 +1,39 @@
 mod data;
 mod preprocess;
 mod split;
-mod logistic;
-
+mod linear;
+mod model_io;
 use preprocess::StandardScaler;
 use split::train_test_split;
 
 fn main() {
     // 1. load data
-    let (X, y) = data::load_csv("data.csv", 3).expect("load failed");
+    let (x, y) = data::load_csv("data.csv", 3).expect("load failed");
 
     // 2. split (20% test)
-    let (X_train, X_test, y_train, y_test) =
-        train_test_split(&X, &y, 0.2, true, Some(42)).expect("split failed");
+    let (x_train, x_test, y_train, y_test) =
+        train_test_split(&x, &y, 0.2, true, Some(42)).expect("split failed");
 
     // 3. scale (fit on train only)
-    let (scaler, X_train_s) = StandardScaler::fit_transform(&X_train);
-    let X_test_s = scaler.transform(&X_test);
+    let (scaler, x_train_s) = StandardScaler::fit_transform(&x_train);
+    let x_test_s = scaler.transform(&x_test);
 
     // 4. add bias
-    let Xb_train = preprocess::add_bias(&X_train_s);
-    let Xb_test = preprocess::add_bias(&X_test_s);
+    let xb_train = preprocess::add_bias(&x_train_s);
+    let xb_test = preprocess::add_bias(&x_test_s);
 
-    // 5. create and train logistic model
-    let mut clf = logistic::LogisticRegression::new(Xb_train.ncols());
-    clf.fit(&Xb_train, &y_train, 2000, 0.1, true, 100);
+    // 5. train linear regression model
+    let coef = linear::train_ols(&xb_train, &y_train).expect("OLS training failed");
 
     // 6. evaluate
-    let probs = clf.predict_proba(&Xb_test);
-    let preds = clf.predict(&Xb_test);
-    let loss = logistic::LogisticRegression::log_loss(&probs, &y_test);
+    let y_pred_train = linear::predict(&xb_train, &coef);
+    let y_pred_test = linear::predict(&xb_test, &coef);
 
-    println!("Test log_loss = {:.6}", loss);
-    let acc = preds
-        .iter()
-        .zip(y_test.iter())
-        .filter(|(p, yt)| (*p - *yt).abs() < 1e-9)
-        .count() as f64
-        / (y_test.len() as f64);
-    println!("Test accuracy = {:.4}", acc);
+    println!("Train RMSE: {:.4}", linear::rmse(&y_train, &y_pred_train));
+    println!("Train R²:   {:.4}", linear::r2(&y_train, &y_pred_train));
+    println!("Test RMSE:  {:.4}", linear::rmse(&y_test, &y_pred_test));
+    println!("Test R²:    {:.4}", linear::r2(&y_test, &y_pred_test));
 
-    println!("Weights: {:?}", clf.w);
+    println!("\nCoefficients: {:?}", coef);
 }
 
