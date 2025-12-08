@@ -6,17 +6,22 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 
 ### Implemented Algorithms
 - **Linear Regression** - Ordinary Least Squares (OLS) using normal equation
-- **Logistic Regression** - Binary classification with gradient descent
+- **Logistic Regression** - Binary classification with gradient descent and L2 regularization
 - **Standard Scaler** - Feature normalization (z-score standardization)
 - **Missing Value Imputation** - Median-based imputation for handling NaN values
 - **Train-Test Split** - Stratified data splitting with optional shuffling
+- **One-Hot Encoding** - Categorical variable encoding for single and multiple columns
 
 ### Key Capabilities
-- ✅ CSV data loading with automatic missing value handling (NaN)
+- ✅ CSV and Excel (.xlsx) data loading with automatic missing value handling (NaN)
 - ✅ Feature scaling and normalization
+- ✅ One-hot encoding for categorical features
+- ✅ L2 regularization support for logistic regression
 - ✅ Model serialization (save/load to JSON)
 - ✅ High-performance matrix operations using `ndarray` and `nalgebra`
-- ✅ Comprehensive evaluation metrics (MSE, RMSE, R², accuracy)
+- ✅ Comprehensive evaluation metrics:
+  - **Regression**: MSE, RMSE, R²
+  - **Classification**: Accuracy, Precision, Recall, F1-Score, ROC-AUC, Confusion Matrix
 
 ## 📋 Requirements
 
@@ -27,7 +32,7 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/gaurav13407/ML_ALGO_IN_RUST.git
+git clone https://github.com/gaurav13408/ML_ALGO_IN_RUST.git
 cd ML_ALGO_Rewite
 ```
 
@@ -38,7 +43,9 @@ cargo build --release
 
 ## 📊 Quick Start
 
-### Running Linear Regression Example
+### Running Examples
+
+#### Linear Regression Example
 
 The project includes a complete example using California housing data:
 
@@ -55,6 +62,33 @@ MSE: 4786221958.573119
 R² : 0.646525
 Predict time: ~1.2 ms
 Saved model -> models/linear_model_rust.json
+```
+
+#### Logistic Regression Example
+
+Binary classification with L2 regularization:
+
+```bash
+cargo run --bin logistic_regression
+```
+
+**Expected Output:**
+```
+Loaded X shape: (768, 8), y.len: 768
+Data sets — Train rows: 614, Test rows: 154
+epoch 100/1000  log_loss = 0.xxxxx
+...
+Results:
+ROC-AUC: 0.8xxx
+Accuracy: 0.7xxx
+Precision: 0.7xxx
+Recall: 0.6xxx
+F1: 0.6xxx
+Confusion matrix:
+[[tn, fp],
+ [fn, tp]]
+Train time: ~XXXms, Predict time: ~XXms
+Saved weights to models/logistic_weights.csv
 ```
 
 ### Using as a Library
@@ -115,18 +149,25 @@ ML_ALGO_Rewite/
 ├── src/
 │   ├── lib.rs           # Library entry point, exports public modules
 │   ├── main.rs          # Main binary (logistic regression demo)
-│   ├── data.rs          # CSV loading with NaN handling
+│   ├── data.rs          # CSV/Excel loading with NaN handling
 │   ├── preprocess.rs    # Scaling, normalization, imputation
 │   ├── split.rs         # Train-test splitting
 │   ├── linear.rs        # Linear regression (OLS)
-│   ├── logistic.rs      # Logistic regression
+│   ├── logistic.rs      # Logistic regression with L2 regularization
+│   ├── metrics.rs       # Evaluation metrics (accuracy, precision, recall, F1, ROC-AUC)
+│   ├── encoding.rs      # One-hot encoding for categorical variables
 │   └── model_io.rs      # Model serialization/deserialization
 ├── test/
-│   └── linear_regression.rs  # Linear regression example
+│   ├── linear_regression.rs   # Linear regression example
+│   └── logistic_regression.rs # Logistic regression example
 ├── examples/
-│   ├── Linear_regression_1.csv    # California housing dataset
+│   ├── Linear_regression_1.csv       # California housing dataset
+│   ├── logistic_regression_5.csv     # Diabetes dataset
 │   └── linear_regression_example.rs
-├── models/              # Saved model files (JSON)
+├── models/              # Saved model files (JSON, CSV weights)
+├── results/             # Benchmark results
+│   ├── Linear_regression_Result.csv.xlsx
+│   └── Logsitic_regression_Result.xlsx
 ├── Cargo.toml          # Project configuration
 └── README.md           # This file
 ```
@@ -193,12 +234,48 @@ pub fn r2(y_true: &Array1<f64>, y_pred: &Array1<f64>) -> f64
 ### `logistic` - Logistic Regression
 ```rust
 pub struct LogisticRegression { pub w: Array1<f64> }
-pub fn fit(&mut self, X: &Array2<f64>, y: &Array1<f64>, epochs: usize, lr: f64, ...)
+pub fn fit(&mut self, X: &Array2<f64>, y: &Array1<f64>, epochs: usize, lr: f64, l2: f64, verbose: bool, print_every: usize)
 pub fn predict_proba(&self, X: &Array2<f64>) -> Array1<f64>
 pub fn predict(&self, X: &Array2<f64>) -> Array1<f64>
+pub fn log_loss(probs: &Array1<f64>, y: &Array1<f64>) -> f64
 ```
 - Binary classification with gradient descent
+- **L2 regularization** support (ridge penalty) to prevent overfitting
 - Numerically stable sigmoid implementation
+- Log loss (binary cross-entropy) for model evaluation
+
+### `metrics` - Evaluation Metrics
+```rust
+pub fn confusion_counts(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> (usize, usize, usize, usize)
+pub fn accuracy(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
+pub fn precision(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
+pub fn recall(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
+pub fn f1_score(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
+pub fn confusion_matrix_array(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> Array2<usize>
+pub fn roc_auc_score(y_true: &Array1<f64>, y_proba: &Array1<f64>) -> f64
+```
+- **Confusion Matrix**: True/False Positives/Negatives
+- **Accuracy**: Overall correctness
+- **Precision**: Positive prediction accuracy
+- **Recall**: True positive rate (sensitivity)
+- **F1-Score**: Harmonic mean of precision and recall
+- **ROC-AUC**: Area under ROC curve using rank-based method
+
+### `encoding` - Categorical Encoding
+```rust
+pub struct OneHotEncoder { pub categories: Vec<String>, index_map: HashMap<String, usize> }
+pub fn fit(&mut self, col: &[String])
+pub fn transform(&self, col: &[String]) -> Array2<f64>
+pub fn fit_transform(col: &[String]) -> Array2<f64>
+
+pub struct OneHotEncoderMulti { pub encoders: Vec<OneHotEncoder> }
+pub fn fit(&mut self, cols: &Vec<Vec<String>>)
+pub fn transform(&self, cols: &Vec<Vec<String>>) -> Array2<f64>
+pub fn fit_transform(cols: &Vec<Vec<String>>) -> Array2<f64>
+```
+- **OneHotEncoder**: Convert categorical column to binary (0/1) matrix
+- **OneHotEncoderMulti**: Encode multiple categorical columns and concatenate
+- Handles unknown categories gracefully (ignore mode)
 
 ### `model_io` - Model Persistence
 ```rust
@@ -209,13 +286,38 @@ pub fn load_model(path: &str) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>),
 
 ## 📈 Performance
 
-Benchmarks on California Housing dataset (20,640 samples, 8 features):
+### Linear Regression Benchmarks
+
+**California Housing Dataset** (20,640 samples, 8 features):
 
 | Operation | Time |
 |-----------|------|
-| Data Loading | ~10 ms |
-| Training (Linear Regression) | ~25 ms |
+| Data Loading (CSV) | ~10 ms |
+| Training (OLS) | ~25 ms |
 | Prediction (4,128 samples) | ~1.2 ms |
+| Model R² Score | 0.646 |
+
+**Detailed results**: See `results/Linear_regression_Result.csv.xlsx`
+
+### Logistic Regression Benchmarks
+
+**Diabetes Dataset** (768 samples, 8 features):
+
+| Metric | Value |
+|--------|-------|
+| Training Time (1000 epochs) | ~XXX ms |
+| Prediction Time | ~XX ms |
+| ROC-AUC Score | 0.8xxx |
+| Accuracy | 0.7xxx |
+| F1-Score | 0.6xxx |
+
+**Detailed results**: See `results/Logsitic_regression_Result.xlsx`
+
+### Key Performance Features
+- ✅ Pure Rust implementation - no Python overhead
+- ✅ SIMD-optimized matrix operations via `ndarray`
+- ✅ Zero-copy data structures where possible
+- ✅ Efficient memory layout with contiguous arrays
 
 ## 🎯 Use Cases
 
@@ -293,12 +395,13 @@ cargo clean
 ## 🤝 Contributing
 
 Contributions are welcome! Areas for improvement:
-- Additional algorithms (decision trees, SVM, etc.)
-- More preprocessing techniques
+- Additional algorithms (decision trees, SVM, neural networks, etc.)
+- More preprocessing techniques (PCA, polynomial features)
 - Cross-validation
-- Regularization (Ridge, Lasso)
-- Multi-class classification
+- L1 regularization (Lasso) for linear regression
+- Multi-class classification (softmax regression)
 - Performance optimizations
+- GPU acceleration support
 
 ## 📝 License
 
