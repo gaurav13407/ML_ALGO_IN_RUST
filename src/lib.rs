@@ -5,3 +5,5 @@ pub mod split;
 pub mod linear;
 pub mod logistic;
 pub mod model_io;
+pub mod metrics;
+pub mod encoding;

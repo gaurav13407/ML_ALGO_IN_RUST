@@ -16,3 +16,6 @@ calamine = "0.24"  # Excel file support
 [[bin]]
 name = "linear_regression"
 path = "test/linear_regression.rs"
+[[bin]]
+name="logsitic_regression"
+path="test/logistic_regression.rs"

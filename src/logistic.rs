@@ -76,6 +76,7 @@ impl LogisticRegression {
         y: &Array1<f64>,
         epochs: usize,
         lr: f64,
+        l2:f64,
         verbose: bool,
         print_every: usize,
     ) {
@@ -88,7 +89,14 @@ impl LogisticRegression {
 
             // gradient: (1/n) * X^T (probs - y)
             let residual = &probs - y; // shape (n_samples,)
-            let grad = (1.0 / n) * X.t().dot(&residual); // shape (n_features_with_bias,)
+            let mut  grad = (1.0 / n) * X.t().dot(&residual); // shape (n_features_with_bias,)
+              if l2 > 0.0 {
+                let mut reg = self.w.clone();           // clone current weights
+                reg *= l2 / n;                          // scale by lambda/n
+                let bias_index = self.w.len() - 1;     // assume bias is last column
+                reg[bias_index] = 0.0;                 // no regularization on bias
+                grad += &reg;                          // add regularization to gradient
+                    }
 
             // update weights
             self.w = &self.w - &(grad * lr);
