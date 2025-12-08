@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let medians = preprocess::column_median(&x_train);
     let x_train_imp = preprocess::impute_median(&x_train, &medians);
     let x_test_imp = preprocess::impute_median(&x_test, &medians);
-use ML_ALGO_Rewite::{data,preprocess,spilt,linear,model_io,metrics,encoding};
+use ML_ALGO_Rewite::{data,preprocess,split,linear,model_io,metrics,encoding};
 
     // Scale
     let scaler = preprocess::StandardScaler::fit(&x_train_imp);
