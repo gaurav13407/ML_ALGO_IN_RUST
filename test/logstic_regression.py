@@ -98,6 +98,7 @@ def main():
         "precision": precision_score(y_test, y_pred, zero_division=0),
         "recall": recall_score(y_test, y_pred, zero_division=0),
         "f1": f1_score(y_test, y_pred, zero_division=0),
+print(type(arr))
         "roc_auc": roc_auc_score(y_test, y_proba),
         "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
     }

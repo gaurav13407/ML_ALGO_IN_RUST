@@ -7,6 +7,7 @@ edition = "2021"
 ndarray = "0.15"
 ndarray-rand = "0.14"
 csv = "1.3"
+rand_distr = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 rand = "0.8"
@@ -19,3 +20,12 @@ path = "test/linear_regression.rs"
 [[bin]]
 name="logsitic_regression"
 path="test/logistic_regression.rs"
+[[bin]]
+name="Kmeans"
+path="test/Kmeans.rs"
+[[bin]]
+name="load_data"
+path="test/load_dataset.rs"
+[[bin]]
+name="load_data_1"
+path="test/load_xy_dataset.rs"

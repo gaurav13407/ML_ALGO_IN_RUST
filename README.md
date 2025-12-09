@@ -1,12 +1,21 @@
 # ML Algorithms from Scratch in Rust
 
-A high-performance machine learning library implemented from scratch in Rust, featuring linear regression, logistic regression, and essential data preprocessing utilities.
+A high-performance machine learning library implemented from scratch in Rust, featuring supervised learning (linear/logistic regression), unsupervised learning (K-Means clustering), and intelligent data preprocessing with automatic categorical feature handling.
+
+## 🌟 What's New
+
+- **🤖 K-Means Clustering** - Unsupervised learning with K-Means++ initialization
+- **🧠 Smart Dataset Loader** - Automatically detects and encodes categorical features
+- **📊 Multiple Datasets** - 15+ example datasets included for testing
+- **🐍 Python Comparisons** - Side-by-side Python scripts for benchmarking
+- **📈 Comprehensive Benchmarks** - Performance results for all algorithms in `results/`
 
 ## 🚀 Features
 
 ### Implemented Algorithms
 - **Linear Regression** - Ordinary Least Squares (OLS) using normal equation
 - **Logistic Regression** - Binary classification with gradient descent and L2 regularization
+- **K-Means Clustering** - Unsupervised clustering with K-Means++ initialization
 - **Standard Scaler** - Feature normalization (z-score standardization)
 - **Missing Value Imputation** - Median-based imputation for handling NaN values
 - **Train-Test Split** - Stratified data splitting with optional shuffling
@@ -14,6 +23,7 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 
 ### Key Capabilities
 - ✅ CSV and Excel (.xlsx) data loading with automatic missing value handling (NaN)
+- ✅ **Smart Dataset Loader** - Automatic categorical detection and one-hot encoding
 - ✅ Feature scaling and normalization
 - ✅ One-hot encoding for categorical features
 - ✅ L2 regularization support for logistic regression
@@ -22,6 +32,7 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 - ✅ Comprehensive evaluation metrics:
   - **Regression**: MSE, RMSE, R²
   - **Classification**: Accuracy, Precision, Recall, F1-Score, ROC-AUC, Confusion Matrix
+  - **Clustering**: Inertia (within-cluster sum of squares)
 
 ## 📋 Requirements
 
@@ -69,7 +80,7 @@ Saved model -> models/linear_model_rust.json
 Binary classification with L2 regularization:
 
 ```bash
-cargo run --bin logistic_regression
+cargo run --bin logsitic_regression
 ```
 
 **Expected Output:**
@@ -91,6 +102,35 @@ Train time: ~XXXms, Predict time: ~XXms
 Saved weights to models/logistic_weights.csv
 ```
 
+#### K-Means Clustering Example
+
+Unsupervised clustering with automatic categorical encoding:
+
+```bash
+cargo run --bin Kmeans
+```
+
+**Expected Output:**
+```
+=== Loaded Dataset ===
+X shape = (n_samples, n_features)
+Cluster assignments: [0, 1, 2, 0, 1, ...]
+Inertia: XXX.XXX
+Centroids shape: (k, n_features)
+```
+
+#### Dataset Loader Examples
+
+Test the smart dataset loader with automatic categorical detection:
+
+```bash
+# Load dataset without target (X only)
+cargo run --bin load_data
+
+# Load dataset with target (X, y)
+cargo run --bin load_data_1
+```
+
 ### Using as a Library
 
 Add to your `Cargo.toml`:
@@ -100,7 +140,7 @@ ML_ALGO_Rewite = { path = "../path/to/ML_ALGO_Rewite" }
 ndarray = "0.15"
 ```
 
-Example usage:
+#### Example 1: Traditional Workflow (Manual Feature Engineering)
 ```rust
 use ML_ALGO_Rewite::{data, preprocess, split, linear};
 use ndarray::{Array1, Array2};
@@ -142,6 +182,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+#### Example 2: Smart Dataset Loader (Automatic Feature Engineering)
+```rust
+use ML_ALGO_Rewite::{load_data, split, Kmeans};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load dataset with automatic categorical detection and encoding
+    let ds = load_data::DatasetLoader::from_path("data.csv")
+        .with_target("species")  // categorical target auto-encoded
+        .build()?;
+    
+    let x = ds.x;  // Fully encoded feature matrix (numeric + one-hot)
+    let y = ds.y.unwrap();  // Encoded target (0.0, 1.0, 2.0, ...)
+    
+    // Check label mapping for categorical targets
+    if let Some(label_map) = ds.label_map {
+        println!("Label mapping: {:?}", label_map);
+        // e.g., ["setosa", "versicolor", "virginica"]
+    }
+    
+    println!("Feature names: {:?}", ds.feature_names);
+    // e.g., ["sepal_length", "sepal_width", "color__red", "color__blue", ...]
+    
+    // Use the data directly with any algorithm
+    let mut kmeans = Kmeans::KMeans::new(3)
+        .max_iter(300)
+        .rng_seed(42);
+    
+    let labels = kmeans.fit(&x.view());
+    println!("Cluster assignments: {:?}", labels);
+    println!("Inertia: {:?}", kmeans.inertia);
+    
+    Ok(())
+}
+```
+
 ## 📁 Project Structure
 
 ```
@@ -149,25 +224,46 @@ ML_ALGO_Rewite/
 ├── src/
 │   ├── lib.rs           # Library entry point, exports public modules
 │   ├── main.rs          # Main binary (logistic regression demo)
-│   ├── data.rs          # CSV/Excel loading with NaN handling
+│   ├── data.rs          # CSV/Excel loading with NaN handling + raw data loader
+│   ├── load_data.rs     # Smart dataset loader with auto categorical detection
 │   ├── preprocess.rs    # Scaling, normalization, imputation
 │   ├── split.rs         # Train-test splitting
 │   ├── linear.rs        # Linear regression (OLS)
 │   ├── logistic.rs      # Logistic regression with L2 regularization
+│   ├── Kmeans.rs        # K-Means clustering with K-Means++ init
 │   ├── metrics.rs       # Evaluation metrics (accuracy, precision, recall, F1, ROC-AUC)
 │   ├── encoding.rs      # One-hot encoding for categorical variables
 │   └── model_io.rs      # Model serialization/deserialization
 ├── test/
 │   ├── linear_regression.rs   # Linear regression example
-│   └── logistic_regression.rs # Logistic regression example
+│   ├── logistic_regression.rs # Logistic regression example
+│   ├── KMeans.rs              # K-Means clustering example
+│   ├── load_dataset.rs        # Dataset loader test (no target)
+│   ├── load_xy_dataset.rs     # Dataset loader test (with target)
+│   ├── linear_regression.py   # Python comparison script
+│   ├── logstic_regression.py  # Python comparison script
+│   └── KMeans.py              # Python comparison script
 ├── examples/
 │   ├── Linear_regression_1.csv       # California housing dataset
+│   ├── Linear_refression_2.csv
+│   ├── Linear_refression_3.csv
+│   ├── Linear_refression_4.csv
+│   ├── Linear_refression_5.csv
+│   ├── Linear_refression_6.xlsx      # Excel format dataset
+│   ├── Logistic_regression_1.csv
+│   ├── Logistic_regression_2.csv
+│   ├── Logistic_regression_3.csv
+│   ├── Logistic_regression_4.csv
 │   ├── logistic_regression_5.csv     # Diabetes dataset
-│   └── linear_regression_example.rs
+│   └── KMeans_1.csv                  # Clustering dataset
 ├── models/              # Saved model files (JSON, CSV weights)
+│   ├── linear_model_rust.json
+│   ├── logistic_weights.csv
+│   └── linear_model.joblib
 ├── results/             # Benchmark results
 │   ├── Linear_regression_Result.csv.xlsx
-│   └── Logsitic_regression_Result.xlsx
+│   ├── Logsitic_regression_Result.xlsx
+│   └── KMeans_Result.xlsx
 ├── Cargo.toml          # Project configuration
 └── README.md           # This file
 ```
@@ -277,6 +373,50 @@ pub fn fit_transform(cols: &Vec<Vec<String>>) -> Array2<f64>
 - **OneHotEncoderMulti**: Encode multiple categorical columns and concatenate
 - Handles unknown categories gracefully (ignore mode)
 
+### `Kmeans` - K-Means Clustering
+```rust
+pub struct KMeans { k: usize, max_iter: usize, tol: f64, pub centroids: Option<Array2<f64>>, pub inertia: Option<f64> }
+pub fn new(k: usize) -> Self
+pub fn max_iter(self, it: usize) -> Self
+pub fn tol(self, t: f64) -> Self
+pub fn rng_seed(self, seed: u64) -> Self
+pub fn fit(&mut self, x: &ArrayView2<f64>) -> Array1<usize>
+pub fn predict(&self, x: &ArrayView2<f64>) -> Array1<usize>
+pub fn centroids(&self) -> Option<&Array2<f64>>
+```
+- **K-Means++ Initialization**: Smart centroid initialization for faster convergence
+- **Configurable**: Set max iterations, tolerance, and random seed
+- **Inertia**: Measures within-cluster sum of squares
+- **Predict**: Assign new samples to nearest cluster
+
+### `load_data` - Smart Dataset Loader
+```rust
+pub struct Dataset { pub x: Array2<f64>, pub y: Option<Array1<f64>>, pub feature_names: Vec<String>, pub label_map: Option<Vec<String>> }
+
+pub struct DatasetLoader
+pub fn from_path(path: &str) -> Self
+pub fn with_target(self, name: &str) -> Self
+pub fn with_target_index(self, idx: usize) -> Self
+pub fn build(self) -> Result<Dataset, Box<dyn Error>>
+```
+- **Automatic Categorical Detection**: Detects non-numeric columns automatically
+- **One-Hot Encoding**: Automatically encodes categorical features
+- **Target Handling**: Supports categorical targets with label mapping
+- **Feature Names**: Preserves original and encoded feature names
+- **Flexible API**: Load with or without target, by name or index
+
+**Example Usage:**
+```rust
+// Load dataset with target column by name
+let ds = load_data::DatasetLoader::from_path("data.csv")
+    .with_target("price")
+    .build()?;
+
+let x = ds.x;  // Fully encoded feature matrix
+let y = ds.y.unwrap();  // Target vector
+println!("Features: {:?}", ds.feature_names);
+```
+
 ### `model_io` - Model Persistence
 ```rust
 pub fn save_model(path: &str, coef: &Array1<f64>, mean: &Array1<f64>, std: &Array1<f64>) -> Result<(), Box<dyn Error>>
@@ -313,11 +453,24 @@ pub fn load_model(path: &str) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>),
 
 **Detailed results**: See `results/Logsitic_regression_Result.xlsx`
 
+### K-Means Clustering Benchmarks
+
+**Clustering Dataset** (n_samples, n_features):
+
+| Metric | Value |
+|--------|-------|
+| Clustering Time | ~XXX ms |
+| Convergence | < max_iter |
+| Inertia | XXX.XXX |
+
+**Detailed results**: See `results/KMeans_Result.xlsx`
+
 ### Key Performance Features
 - ✅ Pure Rust implementation - no Python overhead
 - ✅ SIMD-optimized matrix operations via `ndarray`
 - ✅ Zero-copy data structures where possible
 - ✅ Efficient memory layout with contiguous arrays
+- ✅ K-Means++ initialization for faster convergence
 
 ## 🎯 Use Cases
 
@@ -326,39 +479,89 @@ pub fn load_model(path: &str) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>),
 - **Custom ML Pipelines** - Build specialized preprocessing and modeling workflows
 - **Research** - Experiment with algorithm modifications
 
-## 🔬 Example: Custom Dataset
+## 🔬 Example: Loading Datasets
 
-### CSV Files
-Replace the dataset by modifying the binary:
+### Option 1: Basic CSV/Excel Loading (Numeric Data Only)
+
+For datasets with all numeric features:
 
 ```rust
-// Using column index
+// CSV with column index
 let (x, y) = data::load_csv("your_data.csv", 5)?;
 
-// Using column name (recommended)
+// CSV with column name (recommended)
 let (x, y) = data::load_csv_by_name("your_data.csv", "target_column_name")?;
-```
 
-### Excel Files (.xlsx)
-Load data from Excel files:
-
-```rust
-// Using column name with default (first) sheet
+// Excel with column name and default (first) sheet
 let (x, y) = data::load_excel_by_name("housing_data.xlsx", "price", None)?;
 
-// Using column name with specific sheet
+// Excel with column name and specific sheet
 let (x, y) = data::load_excel_by_name("housing_data.xlsx", "price", Some("Sheet1"))?;
 
-// Using column index
+// Excel with column index
 let (x, y) = data::load_excel("housing_data.xlsx", 8, None)?;
 ```
 
-The pipeline automatically handles:
-- Missing values (median imputation)
-- Feature scaling
-- Model training and evaluation
-- Model persistence
-- CSV and Excel formats (.csv, .xlsx)
+### Option 2: Smart Dataset Loader (Automatic Categorical Handling)
+
+**For datasets with mixed numeric and categorical features** - the smart loader automatically:
+- Detects categorical columns (strings that can't parse as numbers)
+- One-hot encodes categorical features
+- Handles categorical targets with label mapping
+- Preserves feature names
+
+```rust
+use ML_ALGO_Rewite::load_data;
+
+// Load with categorical target (e.g., species: "setosa", "versicolor", "virginica")
+let ds = load_data::DatasetLoader::from_path("iris.csv")
+    .with_target("species")  
+    .build()?;
+
+let x = ds.x;              // Array2<f64> - fully encoded (numeric + one-hot)
+let y = ds.y.unwrap();     // Array1<f64> - [0.0, 1.0, 2.0, ...] for categories
+let features = ds.feature_names;  // Vec<String> - ["sepal_length", "petal_width", "color__red", ...]
+
+// Check label mapping for categorical targets
+if let Some(labels) = ds.label_map {
+    println!("Classes: {:?}", labels);  // ["setosa", "versicolor", "virginica"]
+}
+
+// Load without target (unsupervised learning)
+let ds2 = load_data::DatasetLoader::from_path("data.csv")
+    .build()?;  // X only, no y
+
+// Load with numeric target by column index
+let ds3 = load_data::DatasetLoader::from_path("data.csv")
+    .with_target_index(0)
+    .build()?;
+```
+
+**When to use which:**
+- **Basic loaders** (`load_csv`, `load_excel`): Pure numeric data, manual preprocessing
+- **Smart loader** (`DatasetLoader`): Mixed data types, automatic feature engineering
+
+## 🎯 What This Library Handles Automatically
+
+### Data Loading & Preprocessing
+- ✅ CSV and Excel (.csv, .xlsx) file formats
+- ✅ Missing values (NaN detection and median imputation)
+- ✅ Categorical feature detection and one-hot encoding
+- ✅ Categorical target encoding with label mapping
+- ✅ Feature name preservation
+
+### Machine Learning
+- ✅ Linear regression (OLS with ridge fallback)
+- ✅ Logistic regression with L2 regularization
+- ✅ K-Means clustering with K-Means++ initialization
+- ✅ Feature scaling (z-score normalization)
+- ✅ Train-test splitting with optional shuffling
+
+### Evaluation & Persistence
+- ✅ Regression metrics (MSE, RMSE, R²)
+- ✅ Classification metrics (Accuracy, Precision, Recall, F1, ROC-AUC)
+- ✅ Clustering metrics (Inertia)
+- ✅ Model serialization (JSON, CSV)
 
 ## 🛠️ Development
 
@@ -387,19 +590,22 @@ cargo clean
 - **ndarray** (0.15) - N-dimensional arrays for numerical computing
 - **nalgebra** (0.32) - Linear algebra (matrix inversion)
 - **csv** (1.3) - CSV parsing
+- **calamine** (0.24) - Excel file reading (.xlsx)
 - **serde** (1.0) - Serialization framework
 - **serde_json** (1.0) - JSON serialization
 - **rand** (0.8) - Random number generation
+- **rand_distr** (0.4) - Probability distributions (for K-Means++)
 - **ndarray-rand** (0.14) - Random array generation
 
 ## 🤝 Contributing
 
 Contributions are welcome! Areas for improvement:
-- Additional algorithms (decision trees, SVM, neural networks, etc.)
-- More preprocessing techniques (PCA, polynomial features)
+- Additional algorithms (decision trees, SVM, neural networks, DBSCAN, etc.)
+- More preprocessing techniques (PCA, polynomial features, min-max scaling)
 - Cross-validation
 - L1 regularization (Lasso) for linear regression
 - Multi-class classification (softmax regression)
+- Hierarchical clustering
 - Performance optimizations
 - GPU acceleration support
 

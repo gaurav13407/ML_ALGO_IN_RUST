@@ -50,7 +50,7 @@ pub fn train_test_split(
     } else if n_test >= n {
         n_test = n - 1;
     }
-    let n_train = n - n_test;
+    let _n_train = n - n_test;
 
     // helper to build X by copying selected rows
     let build_X = |idxs: &[usize]| -> Result<Array2<f64>, Box<dyn Error>> {

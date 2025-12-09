@@ -1,5 +1,5 @@
 use ndarray::{Array1, Array2};
-use std::{error::Error, fs::File};
+use std::{error::Error, fs::File, result};
 use csv::ReaderBuilder;
 use calamine::{Reader, Xlsx, open_workbook, Data};
 
@@ -264,4 +264,58 @@ pub fn load_csv(path: &str, target_column: usize) -> Result<(Array2<f64>, Array1
     let y = Array1::from_vec(targets);
 
     Ok((x, y))
+}
+
+pub struct CsvData {
+    pub data: Vec<Vec<String>>,
+    pub headers: Vec<String>,
+}
+
+pub fn load_csv_raw(path: &str) -> Result<CsvData, Box<dyn Error>> {
+    let mut rdr = ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(path)?;
+
+    // Read headers
+    let headers: Vec<String> =
+        rdr.headers()?.iter().map(|s| s.to_string()).collect();
+
+    let mut rows: Vec<Vec<String>> = Vec::new();
+
+    for result in rdr.records() {
+        let record = result?;
+        rows.push(record.iter().map(|s| s.to_string()).collect());
+    }
+
+    if rows.is_empty() {
+        return Err("CSV contains no rows".into());
+    }
+
+    Ok(CsvData { data: rows, headers })
+}
+
+/// Detect categorical columns in CsvData.
+/// A column is categorical if ANY value fails to parse as f64.
+pub fn detect_categorical_columns(data: &Vec<Vec<String>>) -> Vec<bool> {
+    if data.is_empty() {
+        return Vec::new();
+    }
+
+    let n_cols = data[0].len();
+    let n_rows = data.len();
+
+    let mut is_cat = vec![false; n_cols];
+
+    for col in 0..n_cols {
+        for row in 0..n_rows {
+            let cell = &data[row][col];
+            // Try to parse as f64 — if fail → categorical
+            if cell.parse::<f64>().is_err() {
+                is_cat[col] = true;
+                break;
+            }
+        }
+    }
+
+    is_cat
 }

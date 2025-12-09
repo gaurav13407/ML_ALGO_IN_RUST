@@ -7,3 +7,5 @@ pub mod logistic;
 pub mod model_io;
 pub mod metrics;
 pub mod encoding;
+pub mod Kmeans;
+pub mod load_data;
