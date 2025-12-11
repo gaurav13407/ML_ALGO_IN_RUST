@@ -2,6 +2,7 @@ use nalgebra::DVector;
 #[macro_use]
 use ndarray::{Array1, Array2, array, ArrayView2, Axis, s};
 use std::{f64, usize};
+use std::collections::HashMap; 
 
 fn to_binary_labels(arr: &Array1<f64>, threshold: f64) -> Vec<usize> {
     arr.iter()
@@ -343,6 +344,143 @@ pub fn calinski_harabasz_score(
     let numerator = b_disp / ((k as f64) - 1.0);
     let denominator = w_disp / ((n as f64) - (k as f64));
     Some(numerator / denominator)
+}
+/// cumulative explained variance: prefix sums of explained_variance (assumes explained_variance is per-component variance)
+pub fn cumulative_explained_variance(explained_variance: &Array1<f64>) -> Array1<f64> {
+    let mut cum = Array1::<f64>::zeros(explained_variance.len());
+    let mut acc = 0.0;
+    for (i, &v) in explained_variance.iter().enumerate() {
+        acc += v;
+        cum[i] = acc;
+    }
+    cum
+}
+
+/// sign-invariant cosine similarity between corresponding components
+/// a: (k, d), b: (k, d) -> returns length-k vector of abs(cosine_similarity)
+pub fn component_similarity(a: &Array2<f64>, b: &Array2<f64>) -> Array1<f64> {
+    assert_eq!(a.nrows(), b.nrows());
+    assert_eq!(a.ncols(), b.ncols());
+    let k = a.nrows();
+    let mut sims = Array1::<f64>::zeros(k);
+    for i in 0..k {
+        let ai = a.row(i);
+        let bi = b.row(i);
+        let dot = ai.dot(&bi);
+        let denom = ai.norm_l2() * bi.norm_l2();
+        if denom == 0.0 {
+            sims[i] = 0.0;
+        } else {
+            sims[i] = (dot / denom).abs();
+        }
+    }
+    sims
+}
+
+/// reconstruction R^2: 1 - SSE / SST  (SSE = sum (x - x_recon)^2, SST = sum (x - mean)^2)
+pub fn reconstruction_r2(original: &Array2<f64>, recon: &Array2<f64>) -> f64 {
+    assert_eq!(original.dim(), recon.dim());
+    let (n, d) = original.dim();
+    // compute global mean
+    let mut mean = Array1::<f64>::zeros(d);
+    for row in original.rows() {
+        mean += &row;
+    }
+    mean /= n as f64;
+
+    let mut sse = 0.0;
+    let mut sst = 0.0;
+    for i in 0..n {
+        let orig_row = original.row(i);
+        let recon_row = recon.row(i);
+        for j in 0..d {
+            let diff_r = orig_row[j] - recon_row[j];
+            sse += diff_r * diff_r;
+            let diff_t = orig_row[j] - mean[j];
+            sst += diff_t * diff_t;
+        }
+    }
+    if sst == 0.0 {
+        return 1.0; // degenerate case: all values identical
+    }
+    1.0 - (sse / sst)
+}
+
+/// Purity score: fraction of total samples assigned to the majority true label in each cluster.
+/// labels_true: ground truth labels (usize per-sample)
+/// labels_pred: predicted cluster labels (usize per-sample)
+pub fn purity_score(labels_true: &Array1<usize>, labels_pred: &Array1<usize>) -> f64 {
+    assert_eq!(labels_true.len(), labels_pred.len());
+    let n = labels_true.len();
+    // cluster_id -> map(true_label -> count)
+    let mut cluster_map: HashMap<usize, HashMap<usize, usize>> = HashMap::new();
+    for i in 0..n {
+        let lt = labels_true[i];
+        let lp = labels_pred[i];
+        cluster_map.entry(lp).or_default().entry(lt).and_modify(|c| *c += 1).or_insert(1);
+    }
+    let mut correct = 0usize;
+    for (_cluster, cmap) in cluster_map.into_iter() {
+        let max_in_cluster = cmap.into_iter().map(|(_lab, cnt)| cnt).max().unwrap_or(0);
+        correct += max_in_cluster;
+    }
+    (correct as f64) / (n as f64)
+}
+
+/// helper: n choose 2
+fn comb2(n: usize) -> f64 {
+    if n < 2 { 0.0 } else { (n * (n - 1) / 2) as f64 }
+}
+
+/// Adjusted Rand Index (ARI)
+/// Implementation follows the combinatorial definition:
+/// ARI = (Index - ExpectedIndex) / (MaxIndex - ExpectedIndex)
+pub fn adjusted_rand_index(labels_true: &Array1<usize>, labels_pred: &Array1<usize>) -> f64 {
+    assert_eq!(labels_true.len(), labels_pred.len());
+    let n = labels_true.len();
+
+    // Build contingency table: (pred_cluster, true_label) -> count
+    let mut contingency: HashMap<usize, HashMap<usize, usize>> = HashMap::new();
+    let mut sum_rows: HashMap<usize, usize> = HashMap::new(); // pred cluster sums
+    let mut sum_cols: HashMap<usize, usize> = HashMap::new(); // true label sums
+
+    for i in 0..n {
+        let t = labels_true[i];
+        let p = labels_pred[i];
+        contingency.entry(p).or_default().entry(t).and_modify(|c| *c += 1).or_insert(1);
+        *sum_rows.entry(p).or_insert(0) += 1;
+        *sum_cols.entry(t).or_insert(0) += 1;
+    }
+
+    // sum over pairs within same cell
+    let mut sum_comb_c = 0.0;
+    for (_p, colmap) in contingency.iter() {
+        for (_t, &cnt) in colmap.iter() {
+            sum_comb_c += comb2(cnt);
+        }
+    }
+
+    // sum over rows and cols comb
+    let mut sum_comb_rows = 0.0;
+    for (_p, &cnt) in sum_rows.iter() {
+        sum_comb_rows += comb2(cnt);
+    }
+    let mut sum_comb_cols = 0.0;
+    for (_t, &cnt) in sum_cols.iter() {
+        sum_comb_cols += comb2(cnt);
+    }
+
+    let total_comb = comb2(n);
+
+    let index = sum_comb_c;
+    let expected_index = (sum_comb_rows * sum_comb_cols) / total_comb;
+    let max_index = 0.5 * (sum_comb_rows + sum_comb_cols);
+
+    if (max_index - expected_index).abs() < 1e-12 {
+        return 0.0;
+    }
+
+    (index - expected_index) / (max_index - expected_index)
 }
 
 #[cfg(test)]

@@ -16,6 +16,7 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 - **Linear Regression** - Ordinary Least Squares (OLS) using normal equation
 - **Logistic Regression** - Binary classification with gradient descent and L2 regularization
 - **K-Means Clustering** - Unsupervised clustering with K-Means++ initialization
+- **PCA (Principal Component Analysis)** - SVD-based dimensionality reduction
 - **Standard Scaler** - Feature normalization (z-score standardization)
 - **Missing Value Imputation** - Median-based imputation for handling NaN values
 - **Train-Test Split** - Stratified data splitting with optional shuffling
@@ -32,7 +33,7 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 - ✅ Comprehensive evaluation metrics:
   - **Regression**: MSE, RMSE, R²
   - **Classification**: Accuracy, Precision, Recall, F1-Score, ROC-AUC, Confusion Matrix
-  - **Clustering**: Inertia (within-cluster sum of squares)
+  - **Clustering**: Inertia, Silhouette Score, Davies-Bouldin Index, Calinski-Harabasz Score
 
 ## 📋 Requirements
 
@@ -447,6 +448,54 @@ pub fn save_model(path: &str, coef: &Array1<f64>, mean: &Array1<f64>, std: &Arra
 pub fn load_model(path: &str) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>), Box<dyn Error>>
 ```
 - Save/load models to JSON format
+
+### `PCA` - Principal Component Analysis
+```rust
+pub struct PCA {
+    pub n_components: usize,
+    pub components: Option<Array2<f64>>,         // Principal components (n_components x n_features)
+    pub explained_variance: Option<Array1<f64>>, // Variance per component
+    pub mean: Option<Array1<f64>>,               // Feature means
+    pub singular_values: Option<Array1<f64>>,    // Singular values
+}
+
+pub fn new(n_components: usize) -> Self
+pub fn fit(&mut self, x: &Array2<f64>) -> Result<(), Box<dyn std::error::Error>>
+pub fn transform(&self, x: &Array2<f64>) -> Array2<f64>
+pub fn inverse_transform(&self, scores: &Array2<f64>) -> Array2<f64>
+pub fn explained_variance_ratio(&self, x: &Array2<f64>) -> Array1<f64>
+pub fn reconstruction_mse(&self, x: &Array2<f64>) -> f64
+```
+
+**Features:**
+- **SVD-based**: Uses Singular Value Decomposition for numerical stability
+- **Dimensionality Reduction**: Project high-dimensional data to lower dimensions
+- **Variance Analysis**: Calculate explained variance per component and cumulative ratios
+- **Inverse Transform**: Reconstruct original data from principal components
+- **Reconstruction Error**: Measure information loss with MSE metric
+
+**Example:**
+```rust
+use ML_ALGO_Rewite::PCA::PCA;
+
+// Create PCA with 2 components
+let mut pca = PCA::new(2);
+
+// Fit on training data
+pca.fit(&x_train)?;
+
+// Transform data to principal components
+let x_transformed = pca.transform(&x_train);
+
+// Check explained variance ratio
+let var_ratio = pca.explained_variance_ratio(&x_train);
+println!("Variance explained: {:?}", var_ratio);
+
+// Reconstruct data
+let x_recon = pca.inverse_transform(&x_transformed);
+let mse = pca.reconstruction_mse(&x_train);
+println!("Reconstruction MSE: {}", mse);
+```
 
 ## 📈 Performance
 

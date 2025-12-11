@@ -9,3 +9,4 @@ pub mod metrics;
 pub mod model_io;
 pub mod preprocess;
 pub mod split;
+pub mod PCA;
