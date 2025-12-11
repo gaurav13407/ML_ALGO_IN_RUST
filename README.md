@@ -112,12 +112,22 @@ cargo run --bin Kmeans
 
 **Expected Output:**
 ```
-=== Loaded Dataset ===
-X shape = (n_samples, n_features)
-Cluster assignments: [0, 1, 2, 0, 1, ...]
-Inertia: XXX.XXX
-Centroids shape: (k, n_features)
+Fit time         = 24.0567ms
+Predict time     = 3.1685ms
+Per-sample pred  ≈ 0.000018973 seconds
+First 10 labels (fit):     [0, 0, 0, 0, 0, 0, 0, 1, 1, 0]
+First 10 labels (predict): [0, 0, 0, 0, 0, 0, 0, 1, 1, 0]
+Inertia                 = 36528388099.32208
+Silhouette score        = 0.7256314858790945
+Davies–Bouldin index    = 0.5190307948651756
+Calinski–Harabasz score = 365.5694958970166
 ```
+
+**Metrics Explained:**
+- **Inertia**: Within-cluster sum of squares (lower is better)
+- **Silhouette Score**: [-1, 1], higher is better (measures cluster separation)
+- **Davies–Bouldin Index**: Lower is better (measures cluster similarity)
+- **Calinski–Harabasz Score**: Higher is better (ratio of between/within cluster dispersion)
 
 #### Dataset Loader Examples
 
@@ -342,6 +352,7 @@ pub fn log_loss(probs: &Array1<f64>, y: &Array1<f64>) -> f64
 
 ### `metrics` - Evaluation Metrics
 ```rust
+// Classification Metrics
 pub fn confusion_counts(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> (usize, usize, usize, usize)
 pub fn accuracy(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
 pub fn precision(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
@@ -349,13 +360,26 @@ pub fn recall(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
 pub fn f1_score(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64
 pub fn confusion_matrix_array(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> Array2<usize>
 pub fn roc_auc_score(y_true: &Array1<f64>, y_proba: &Array1<f64>) -> f64
+
+// Clustering Metrics
+pub fn inertia(x: &ArrayView2<f64>, labels: &Array1<usize>, centroids: &Array2<f64>) -> f64
+pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f64>
+pub fn davies_bouldin_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroids: &Array2<f64>) -> Option<f64>
+pub fn calinski_harabasz_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroids: &Array2<f64>) -> Option<f64>
 ```
+**Classification Metrics:**
 - **Confusion Matrix**: True/False Positives/Negatives
 - **Accuracy**: Overall correctness
 - **Precision**: Positive prediction accuracy
 - **Recall**: True positive rate (sensitivity)
 - **F1-Score**: Harmonic mean of precision and recall
 - **ROC-AUC**: Area under ROC curve using rank-based method
+
+**Clustering Metrics:**
+- **Inertia**: Within-cluster sum of squares (lower is better)
+- **Silhouette Score**: Measures cluster separation, range [-1, 1] (higher is better)
+- **Davies–Bouldin Index**: Measures cluster similarity (lower is better)
+- **Calinski–Harabasz Score**: Ratio of between/within cluster dispersion (higher is better)
 
 ### `encoding` - Categorical Encoding
 ```rust
@@ -455,13 +479,17 @@ pub fn load_model(path: &str) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>),
 
 ### K-Means Clustering Benchmarks
 
-**Clustering Dataset** (n_samples, n_features):
+**Dataset** (167 samples with categorical features, auto-encoded):
 
 | Metric | Value |
 |--------|-------|
-| Clustering Time | ~XXX ms |
-| Convergence | < max_iter |
-| Inertia | XXX.XXX |
+| Fit Time | ~24 ms |
+| Predict Time | ~3.2 ms |
+| Per-sample Prediction | ~0.000019 seconds |
+| Inertia | 36528388099.32 |
+| Silhouette Score | 0.726 |
+| Davies–Bouldin Index | 0.519 |
+| Calinski–Harabasz Score | 365.57 |
 
 **Detailed results**: See `results/KMeans_Result.xlsx`
 
