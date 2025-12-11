@@ -5,12 +5,12 @@ use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
 
+use csv::StringRecord;
 use ndarray::{Array1, Array2};
 use rand::seq::SliceRandom;
 use rand::{rngs::StdRng, SeedableRng};
-use csv::StringRecord;
 
-use ML_ALGO_Rewite::{data, preprocess, split, linear, model_io, metrics, encoding, logistic};
+use ML_ALGO_Rewite::{data, encoding, linear, logistic, metrics, model_io, preprocess, split};
 
 const OUT_DIR: &str = "models";
 
@@ -19,8 +19,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let path = "examples/logistic_regression_5.csv";
     let target_column_name = "Outcome"; // set your target column name
     let test_size = 0.2f64;
-    let seed:u64 = 42;
-    let l2=1.0;
+    let seed: u64 = 42;
+    let l2 = 1.0;
 
     // --- load CSV (expects your data::load_csv_by_name to return (X, y))
     let (x, y): (Array2<f64>, Array1<f64>) = data::load_csv_by_name(path, target_column_name)?;
@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let verbose = true;
     let print_every = epochs / 10;
     let t0 = Instant::now();
-    model.fit(&xb_train, &y_train, epochs, lr,l2, verbose,print_every);
+    model.fit(&xb_train, &y_train, epochs, lr, l2, verbose, print_every);
     let train_dur = t0.elapsed();
 
     // --- predict
@@ -84,7 +84,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Recall: {:.4}", rec);
     println!("F1: {:.4}", f1);
     println!("Confusion matrix:\n{:?}", conf);
-    println!("Train time: {:?}, Predict time: {:?}", train_dur, predict_dur);
+    println!(
+        "Train time: {:?}, Predict time: {:?}",
+        train_dur, predict_dur
+    );
 
     // --- save weights (simple CSV)
     std::fs::create_dir_all(OUT_DIR)?;

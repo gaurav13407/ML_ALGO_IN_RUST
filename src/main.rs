@@ -1,8 +1,8 @@
 mod data;
-mod preprocess;
-mod split;
 mod linear;
 mod model_io;
+mod preprocess;
+mod split;
 use preprocess::StandardScaler;
 use split::train_test_split;
 
@@ -36,4 +36,3 @@ fn main() {
 
     println!("\nCoefficients: {:?}", coef);
 }
-

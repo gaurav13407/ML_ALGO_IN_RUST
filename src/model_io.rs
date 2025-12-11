@@ -41,4 +41,3 @@ pub fn load_model<P: AsRef<Path>>(
         Array1::from(saved.std),
     ))
 }
-

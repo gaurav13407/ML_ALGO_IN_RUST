@@ -1,9 +1,8 @@
-
 // src/linear.rs
 use std::error::Error;
 
-use ndarray::{Array1, Array2};
 use nalgebra::{DMatrix, DVector};
+use ndarray::{Array1, Array2};
 
 /// Train OLS using normal equation:
 /// coef = (X^T X)^(-1) X^T y
@@ -21,25 +20,29 @@ pub fn train_ols(x: &Array2<f64>, y: &Array1<f64>) -> Result<Array1<f64>, Box<dy
     // Convert ndarray to nalgebra for matrix inversion
     let x_data: Vec<f64> = x.iter().copied().collect();
     let y_data: Vec<f64> = y.iter().copied().collect();
-    
+
     let x_mat = DMatrix::from_row_slice(n_samples, n_features, &x_data);
     let y_vec = DVector::from_vec(y_data);
-    
+
     let xt = x_mat.transpose();
     let xtx = &xt * &x_mat;
-    
+
     // Try to invert XtX
     let xtx_inv = match xtx.clone().try_inverse() {
         Some(inv) => inv,
         None => {
             // Fallback: add a tiny ridge regularization lambda * I and invert again
             let diag_sum: f64 = xtx.diagonal().sum();
-            let avg_diag = if n_features > 0 { diag_sum / (n_features as f64) } else { 1.0 };
+            let avg_diag = if n_features > 0 {
+                diag_sum / (n_features as f64)
+            } else {
+                1.0
+            };
             let lambda = avg_diag * 1e-8_f64;
-            
+
             let identity = DMatrix::identity(n_features, n_features);
             let xtx_reg = xtx + identity * lambda;
-            
+
             match xtx_reg.try_inverse() {
                 Some(inv_reg) => inv_reg,
                 None => {
@@ -48,10 +51,10 @@ pub fn train_ols(x: &Array2<f64>, y: &Array1<f64>) -> Result<Array1<f64>, Box<dy
             }
         }
     };
-    
+
     let xty = &xt * y_vec;
     let coef_vec = xtx_inv * xty;
-    
+
     // Convert back to ndarray
     let coef = Array1::from_vec(coef_vec.data.as_vec().clone());
     Ok(coef)
@@ -103,7 +106,9 @@ pub fn r2(y_true: &Array1<f64>, y_pred: &Array1<f64>) -> f64 {
 /// Example: tol = 10000.0 means count predictions where |y_true - y_pred| <= 10000
 #[allow(dead_code)]
 pub fn accuracy_abs_tol(y_true: &Array1<f64>, y_pred: &Array1<f64>, tol: f64) -> f64 {
-    if y_true.len() == 0 { return 0.0; }
+    if y_true.len() == 0 {
+        return 0.0;
+    }
     let count_within = y_true
         .iter()
         .zip(y_pred.iter())
@@ -122,7 +127,9 @@ pub fn accuracy_pct_tol(
     pct: f64,
     abs_tol_for_zero: f64,
 ) -> f64 {
-    if y_true.len() == 0 { return 0.0; }
+    if y_true.len() == 0 {
+        return 0.0;
+    }
     let count_within = y_true
         .iter()
         .zip(y_pred.iter())

@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, ArrayView2, Axis, s};
+use ndarray::{s, Array1, Array2, ArrayView2, Axis};
 use rand::prelude::*;
 use rand_distr::WeightedIndex;
 use std::f64;
@@ -78,9 +78,7 @@ impl KMeans {
                 if counts[c] == 0 {
                     // empty cluster -> reinitialize to a random sample
                     let idx = rng.gen_range(0..n_samples);
-                    new_centroids
-                        .slice_mut(s![c, ..])
-                        .assign(&x.row(idx));
+                    new_centroids.slice_mut(s![c, ..]).assign(&x.row(idx));
                 } else {
                     let mut row = new_centroids.slice_mut(s![c, ..]);
                     row /= counts[c] as f64;
@@ -202,4 +200,3 @@ fn max_centroid_move(prev: &Array2<f64>, next: &Array2<f64>) -> f64 {
     }
     max_move
 }
-

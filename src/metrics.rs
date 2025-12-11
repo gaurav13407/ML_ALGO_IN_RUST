@@ -1,10 +1,12 @@
 use nalgebra::DVector;
 #[macro_use]
-use ndarray::{Array1, Array2, array,ArrayView2,Axis,s};
+use ndarray::{Array1, Array2, array, ArrayView2, Axis, s};
 use std::{f64, usize};
 
 fn to_binary_labels(arr: &Array1<f64>, threshold: f64) -> Vec<usize> {
-    arr.iter().map(|v| if *v >= threshold { 1usize } else { 0usize }).collect()
+    arr.iter()
+        .map(|v| if *v >= threshold { 1usize } else { 0usize })
+        .collect()
 }
 
 /// Return counts (tn, fp, fn, tp)
@@ -13,7 +15,11 @@ pub fn confusion_counts(
     y_pred: &Array1<f64>,
     threshold: f64,
 ) -> (usize, usize, usize, usize) {
-    assert_eq!(y_true.len(), y_pred.len(), "y_true and y_pred must have same length");
+    assert_eq!(
+        y_true.len(),
+        y_pred.len(),
+        "y_true and y_pred must have same length"
+    );
     let t = to_binary_labels(y_true, threshold);
     let p = to_binary_labels(y_pred, threshold);
 
@@ -45,25 +51,41 @@ pub fn accuracy(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f
 pub fn precision(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64 {
     let (_tn, fp, _fn, tp) = confusion_counts(y_true, y_pred, threshold);
     let denom = (tp + fp) as f64;
-    if denom == 0.0 { 0.0 } else { tp as f64 / denom }
+    if denom == 0.0 {
+        0.0
+    } else {
+        tp as f64 / denom
+    }
 }
 
 /// Recall = tp / (tp + fn)
 pub fn recall(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64 {
     let (_tn, _fp, fn_, tp) = confusion_counts(y_true, y_pred, threshold);
     let denom = (tp + fn_) as f64;
-    if denom == 0.0 { 0.0 } else { tp as f64 / denom }
+    if denom == 0.0 {
+        0.0
+    } else {
+        tp as f64 / denom
+    }
 }
 
 /// F1 = 2 * (precision * recall) / (precision + recall)
 pub fn f1_score(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> f64 {
     let p = precision(y_true, y_pred, threshold);
     let r = recall(y_true, y_pred, threshold);
-    if (p + r) == 0.0 { 0.0 } else { 2.0 * p * r / (p + r) }
+    if (p + r) == 0.0 {
+        0.0
+    } else {
+        2.0 * p * r / (p + r)
+    }
 }
 
 /// Return confusion matrix as 2x2 ndarray: [[tn, fp], [fn, tp]]
-pub fn confusion_matrix_array(y_true: &Array1<f64>, y_pred: &Array1<f64>, threshold: f64) -> Array2<usize> {
+pub fn confusion_matrix_array(
+    y_true: &Array1<f64>,
+    y_pred: &Array1<f64>,
+    threshold: f64,
+) -> Array2<usize> {
     let (tn, fp, fn_, tp) = confusion_counts(y_true, y_pred, threshold);
     Array2::from_shape_vec((2, 2), vec![tn, fp, fn_, tp]).unwrap()
 }
@@ -178,7 +200,9 @@ pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f
         } else {
             let mut sum = 0.0;
             for &j in intra_idxs.iter() {
-                if j == i { continue; }
+                if j == i {
+                    continue;
+                }
                 sum += dmat[[i, j]];
             }
             sum / ((intra_idxs.len() - 1) as f64)
@@ -187,13 +211,17 @@ pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f
         // b = min average distance to points in any other cluster
         let mut b = f64::INFINITY;
         for (&other_lab, other_idxs) in clusters.iter() {
-            if other_lab == li { continue; }
+            if other_lab == li {
+                continue;
+            }
             let mut sum = 0.0;
             for &j in other_idxs.iter() {
                 sum += dmat[[i, j]];
             }
             let avg = sum / (other_idxs.len() as f64);
-            if avg < b { b = avg; }
+            if avg < b {
+                b = avg;
+            }
         }
 
         let denom = a.max(b);
@@ -206,7 +234,11 @@ pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f
 }
 
 /// Davies–Bouldin index. Lower is better. Returns None if undefined.
-pub fn davies_bouldin_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroids: &Array2<f64>) -> Option<f64> {
+pub fn davies_bouldin_score(
+    x: &ArrayView2<f64>,
+    labels: &Array1<usize>,
+    centroids: &Array2<f64>,
+) -> Option<f64> {
     use std::collections::HashMap;
     let (_n, _d) = x.dim();
 
@@ -215,7 +247,9 @@ pub fn davies_bouldin_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroi
         clusters.entry(lab).or_default().push(i);
     }
     let k = clusters.len();
-    if k <= 1 { return None; }
+    if k <= 1 {
+        return None;
+    }
 
     // compute S_i = avg distance of points in cluster i to centroid i
     let mut labs_vec: Vec<usize> = clusters.keys().cloned().collect();
@@ -224,7 +258,10 @@ pub fn davies_bouldin_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroi
     let mut s_vals: Vec<f64> = Vec::with_capacity(labs_vec.len());
     for &lab in labs_vec.iter() {
         let idxs = &clusters[&lab];
-        if idxs.is_empty() { s_vals.push(0.0); continue; }
+        if idxs.is_empty() {
+            s_vals.push(0.0);
+            continue;
+        }
         let mut sum = 0.0;
         let c = centroids.slice(s![lab, ..]).to_owned();
         for &i in idxs.iter() {
@@ -242,13 +279,19 @@ pub fn davies_bouldin_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroi
         let s_i = s_vals[ii];
         let mut max_r = 0.0;
         for (jj, &j_lab) in labs_vec.iter().enumerate() {
-            if i_lab == j_lab { continue; }
+            if i_lab == j_lab {
+                continue;
+            }
             let c_j = centroids.slice(s![j_lab, ..]).to_owned();
             let s_j = s_vals[jj];
             let m_ij = euclid(&c_i, &c_j);
-            if m_ij == 0.0 { continue; }
+            if m_ij == 0.0 {
+                continue;
+            }
             let r = (s_i + s_j) / m_ij;
-            if r > max_r { max_r = r; }
+            if r > max_r {
+                max_r = r;
+            }
         }
         r_i_vals[ii] = max_r;
     }
@@ -258,7 +301,11 @@ pub fn davies_bouldin_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroi
 }
 
 /// Calinski–Harabasz score. Higher is better. Returns None if undefined.
-pub fn calinski_harabasz_score(x: &ArrayView2<f64>, labels: &Array1<usize>, centroids: &Array2<f64>) -> Option<f64> {
+pub fn calinski_harabasz_score(
+    x: &ArrayView2<f64>,
+    labels: &Array1<usize>,
+    centroids: &Array2<f64>,
+) -> Option<f64> {
     use std::collections::HashMap;
     let (n, _d) = x.dim();
 
@@ -267,7 +314,9 @@ pub fn calinski_harabasz_score(x: &ArrayView2<f64>, labels: &Array1<usize>, cent
         clusters.entry(lab).or_default().push(i);
     }
     let k = clusters.len();
-    if k <= 1 || n <= k { return None; }
+    if k <= 1 || n <= k {
+        return None;
+    }
 
     // global centroid
     let mut global = Array1::<f64>::zeros(x.shape()[1]);
@@ -287,7 +336,9 @@ pub fn calinski_harabasz_score(x: &ArrayView2<f64>, labels: &Array1<usize>, cent
 
     // within-cluster dispersion W = inertia
     let w_disp = inertia(x, labels, centroids);
-    if w_disp == 0.0 { return None; }
+    if w_disp == 0.0 {
+        return None;
+    }
 
     let numerator = b_disp / ((k as f64) - 1.0);
     let denominator = w_disp / ((n as f64) - (k as f64));
@@ -309,9 +360,9 @@ mod tests {
 
     #[test]
     fn test_clustering_metrics_small() {
-        let x = array![[1.,2.],[1.,4.],[1.,0.],[4.,2.],[4.,4.],[4.,0.]];
-        let labels = array![0usize,0,0,1,1,1];
-        let centroids = array![[1.,2.],[4.,2.]];
+        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
+        let labels = array![0usize, 0, 0, 1, 1, 1];
+        let centroids = array![[1., 2.], [4., 2.]];
 
         let inj = inertia(&x.view(), &labels, &centroids);
         assert!(inj > 0.0);
@@ -327,7 +378,6 @@ mod tests {
     }
 }
 
-
 #[cfg(test)]
 mod tests_kmeans_metrics {
     use super::*;
@@ -338,19 +388,12 @@ mod tests_kmeans_metrics {
         // Two perfect clusters
         // Cluster 0 around (1, 2)
         // Cluster 1 around (4, 2)
-        let x = array![
-            [1., 2.],
-            [1., 4.],
-            [1., 0.],
-            [4., 2.],
-            [4., 4.],
-            [4., 0.]
-        ];
+        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
 
         let labels = array![0usize, 0, 0, 1, 1, 1];
         let centroids = array![
-            [1., 2.],  // centroid for cluster 0
-            [4., 2.]   // centroid for cluster 1
+            [1., 2.], // centroid for cluster 0
+            [4., 2.]  // centroid for cluster 1
         ];
 
         let inj = inertia(&x.view(), &labels, &centroids);
@@ -359,14 +402,7 @@ mod tests_kmeans_metrics {
 
     #[test]
     fn test_silhouette_score_basic() {
-        let x = array![
-            [1., 2.],
-            [1., 4.],
-            [1., 0.],
-            [4., 2.],
-            [4., 4.],
-            [4., 0.]
-        ];
+        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
 
         let labels = array![0usize, 0, 0, 1, 1, 1];
 
@@ -378,43 +414,23 @@ mod tests_kmeans_metrics {
 
     #[test]
     fn test_davies_bouldin_score_basic() {
-        let x = array![
-            [1., 2.],
-            [1., 4.],
-            [1., 0.],
-            [4., 2.],
-            [4., 4.],
-            [4., 0.]
-        ];
+        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
 
         let labels = array![0usize, 0, 0, 1, 1, 1];
-        let centroids = array![
-            [1., 2.],
-            [4., 2.]
-        ];
+        let centroids = array![[1., 2.], [4., 2.]];
 
         let db = davies_bouldin_score(&x.view(), &labels, &centroids);
         assert!(db.is_some());
         let db_val = db.unwrap();
-        assert!(db_val >= 0.0);  // DB index is always >= 0
+        assert!(db_val >= 0.0); // DB index is always >= 0
     }
 
     #[test]
     fn test_calinski_harabasz_score_basic() {
-        let x = array![
-            [1., 2.],
-            [1., 4.],
-            [1., 0.],
-            [4., 2.],
-            [4., 4.],
-            [4., 0.]
-        ];
+        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
 
         let labels = array![0usize, 0, 0, 1, 1, 1];
-        let centroids = array![
-            [1., 2.],
-            [4., 2.]
-        ];
+        let centroids = array![[1., 2.], [4., 2.]];
 
         let ch = calinski_harabasz_score(&x.view(), &labels, &centroids);
         assert!(ch.is_some());

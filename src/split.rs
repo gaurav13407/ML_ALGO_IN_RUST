@@ -1,7 +1,7 @@
 // src/split.rs
 use ndarray::{Array1, Array2};
-use rand::{seq::SliceRandom, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{seq::SliceRandom, SeedableRng};
 use std::error::Error;
 
 /// Train/test split for ndarray arrays.
@@ -96,7 +96,17 @@ pub fn train_test_split_with_indices(
     test_size: f64,
     shuffle: bool,
     seed: Option<u64>,
-) -> Result<(Array2<f64>, Array2<f64>, Array1<f64>, Array1<f64>, Vec<usize>, Vec<usize>), Box<dyn Error>> {
+) -> Result<
+    (
+        Array2<f64>,
+        Array2<f64>,
+        Array1<f64>,
+        Array1<f64>,
+        Vec<usize>,
+        Vec<usize>,
+    ),
+    Box<dyn Error>,
+> {
     // reuse train_test_split to get arrays, but regenerate the indices the same way
     let n = X.nrows();
     if n == 0 {
@@ -158,4 +168,3 @@ pub fn train_test_split_with_indices(
 
     Ok((X_train, X_test, y_train, y_test, train_idx, test_idx))
 }
-

@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, Axis, s};
+use ndarray::{s, Array1, Array2, Axis};
 
 pub fn normalize(X: &mut Array2<f64>) {
     let n_features = X.ncols();
@@ -97,4 +97,3 @@ pub fn impute_median(X: &Array2<f64>, medians: &Array1<f64>) -> Array2<f64> {
     }
     out
 }
-

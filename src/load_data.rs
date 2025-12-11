@@ -1,5 +1,5 @@
 // src/dataset.rs
-use ndarray::{Array1, Array2, s};
+use ndarray::{s, Array1, Array2};
 use std::error::Error;
 
 use crate::data;
@@ -116,9 +116,7 @@ impl DatasetLoader {
             }
             if cat_mask[c] {
                 cat_col_indices.push(c);
-                let col = (0..n_samples)
-                    .map(|r| raw.data[r][c].clone())
-                    .collect();
+                let col = (0..n_samples).map(|r| raw.data[r][c].clone()).collect();
                 cat_cols.push(col);
             }
         }
@@ -179,10 +177,7 @@ impl DatasetLoader {
 
             if !cat_mask[c] {
                 // numeric column
-                let idx = num_names
-                    .iter()
-                    .position(|h| h == &raw.headers[c])
-                    .unwrap();
+                let idx = num_names.iter().position(|h| h == &raw.headers[c]).unwrap();
                 x.slice_mut(s![.., write_pos..write_pos + 1])
                     .assign(&num_arrays[idx]);
                 feature_names.push(raw.headers[c].clone());
@@ -195,10 +190,8 @@ impl DatasetLoader {
 
                     // detect next column prefix
                     let prefix = &raw.headers[c];
-                    let cols_for_this_cat = enc
-                        .iter()
-                        .take_while(|n| n.starts_with(prefix))
-                        .count();
+                    let cols_for_this_cat =
+                        enc.iter().take_while(|n| n.starts_with(prefix)).count();
 
                     let start = cat_cursor;
                     let end = start + cols_for_this_cat;
@@ -222,4 +215,3 @@ impl DatasetLoader {
         })
     }
 }
-

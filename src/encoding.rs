@@ -1,8 +1,8 @@
 // src/utils/encoding.rs
+use crate::data;
+use ndarray::{s, Array2};
 use std::collections::HashMap;
 use std::error::Error;
-use ndarray::{Array2, s};
-use crate::data;
 
 #[derive(Debug, Clone)]
 pub struct OneHotEncoder {
@@ -129,13 +129,17 @@ impl OneHotEncoderMulti {
     }
 }
 
-fn encode_categorical_and_build_matrix(path: &str) -> Result<(Array2<f64>, Vec<String>), Box<dyn Error>> {
+fn encode_categorical_and_build_matrix(
+    path: &str,
+) -> Result<(Array2<f64>, Vec<String>), Box<dyn Error>> {
     // load CSV raw
     let csv = data::load_csv_raw(path)?;
 
     // detect categorical columns (Vec<bool>) or you may already have cat_indices
     let cat_mask = data::detect_categorical_columns(&csv.data);
-    let cat_indices: Vec<usize> = cat_mask.iter().enumerate()
+    let cat_indices: Vec<usize> = cat_mask
+        .iter()
+        .enumerate()
         .filter_map(|(i, &is_cat)| if is_cat { Some(i) } else { None })
         .collect();
 
@@ -160,7 +164,7 @@ fn encode_categorical_and_build_matrix(path: &str) -> Result<(Array2<f64>, Vec<S
             e
         };
         let encoded = enc.transform(&cat_cols); // shape (n_samples, total_ohe_features)
-        // build feature names for each categorical column
+                                                // build feature names for each categorical column
         encoded_feature_names = {
             let mut names: Vec<Vec<String>> = Vec::new();
             for (idx, &ci) in cat_indices.iter().enumerate() {
