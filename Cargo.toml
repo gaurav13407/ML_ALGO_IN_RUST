@@ -33,3 +33,6 @@ path="test/load_xy_dataset.rs"
 [[bin]]
 name="PCA"
 path="test/PCA.rs"
+[[bin]]
+name="KNN"
+path="test/KNN.rs"

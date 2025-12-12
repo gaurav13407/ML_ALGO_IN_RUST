@@ -10,3 +10,4 @@ pub mod model_io;
 pub mod preprocess;
 pub mod split;
 pub mod PCA;
+pub mod KNN;

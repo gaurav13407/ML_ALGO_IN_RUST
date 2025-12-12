@@ -15,6 +15,7 @@ A high-performance machine learning library implemented from scratch in Rust, fe
 ### Implemented Algorithms
 - **Linear Regression** - Ordinary Least Squares (OLS) using normal equation
 - **Logistic Regression** - Binary classification with gradient descent and L2 regularization
+- **K-Nearest Neighbors (KNN)** - Instance-based classification with Euclidean/Manhattan distance
 - **K-Means Clustering** - Unsupervised clustering with K-Means++ initialization
 - **PCA (Principal Component Analysis)** - SVD-based dimensionality reduction
 - **Standard Scaler** - Feature normalization (z-score standardization)
@@ -129,6 +130,37 @@ Calinski–Harabasz score = 365.5694958970166
 - **Silhouette Score**: [-1, 1], higher is better (measures cluster separation)
 - **Davies–Bouldin Index**: Lower is better (measures cluster similarity)
 - **Calinski–Harabasz Score**: Higher is better (ratio of between/within cluster dispersion)
+
+#### K-Nearest Neighbors (KNN) Example
+
+Instance-based classification with distance-based voting:
+
+```bash
+cargo run --bin KNN
+```
+
+**Expected Output:**
+```
+Loading data...
+Loaded X shape: (768, 8), y.len: 768 in XXms
+Train Time: <1 ms
+Predict Time: XX ms
+Accuracy: 0.7XXX
+Precision: 0.7XXX
+Recall: 0.6XXX
+F1 Score: 0.6XXX
+ROC-AUC: 0.8XXX
+Confusion Matrix:
+[[TN, FP],
+ [FN, TP]]
+```
+
+**Features:**
+- **Distance Metrics**: Euclidean or Manhattan distance
+- **Weighting**: Uniform or distance-based voting
+- **Automatic Scaling**: Uses StandardScaler for optimal distance computation
+- **Fast Loading**: Direct CSV loading without categorical encoding overhead
+- **Subsampling**: Automatically limits to 5000 samples for faster computation
 
 #### Dataset Loader Examples
 
@@ -248,6 +280,7 @@ ML_ALGO_Rewite/
 ├── test/
 │   ├── linear_regression.rs   # Linear regression example
 │   ├── logistic_regression.rs # Logistic regression example
+│   ├── KNN.rs                 # K-Nearest Neighbors classification example
 │   ├── KMeans.rs              # K-Means clustering example
 │   ├── PCA.rs                 # PCA dimensionality reduction example
 │   ├── load_dataset.rs        # Dataset loader test (no target)
@@ -280,6 +313,7 @@ ML_ALGO_Rewite/
 ├── results/             # Benchmark results
 │   ├── Linear_regression_Result.csv.xlsx
 │   ├── Logsitic_regression_Result.xlsx
+│   ├── KNN_results.csv
 │   ├── KMeans_Result.xlsx
 │   ├── pca_results.xlsx
 │   ├── PCA_Comparision.xlsx
@@ -555,6 +589,29 @@ println!("Reconstruction MSE: {}", mse);
 | Calinski–Harabasz Score | 365.57 |
 
 **Detailed results**: See `results/KMeans_Result.xlsx`
+
+### K-Nearest Neighbors (KNN) Benchmarks
+
+**Dataset** (768 samples, 8 features - Diabetes dataset):
+
+| Metric | Value |
+|--------|-------|
+| Data Loading Time | ~XX ms |
+| Train Time | <1 ms (lazy learning) |
+| Predict Time | ~XX ms |
+| Accuracy | 0.7XXX |
+| Precision | 0.7XXX |
+| Recall | 0.6XXX |
+| F1 Score | 0.6XXX |
+| ROC-AUC | 0.8XXX |
+
+**Performance Notes:**
+- KNN is a lazy learner (no training phase, just stores data)
+- Prediction time is O(n*m*d) where n=train samples, m=test samples, d=features
+- For large datasets (>5000 samples), automatic subsampling is applied
+- Scaling is critical for KNN - automatic StandardScaler applied
+
+**Detailed results**: See `results/KNN_results.csv`
 
 ### PCA (Principal Component Analysis) Benchmarks
 
