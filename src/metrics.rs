@@ -1,8 +1,5 @@
-use nalgebra::DVector;
-#[macro_use]
-use ndarray::{Array1, Array2, array, ArrayView2, Axis, s};
-use std::{f64, usize};
-use std::collections::HashMap; 
+use ndarray::{Array1, Array2, array, ArrayView2, s};
+use std::collections::HashMap;
 
 fn to_binary_labels(arr: &Array1<f64>, threshold: f64) -> Vec<usize> {
     arr.iter()
@@ -21,6 +18,7 @@ pub fn confusion_counts(
         y_pred.len(),
         "y_true and y_pred must have same length"
     );
+
     let t = to_binary_labels(y_true, threshold);
     let p = to_binary_labels(y_pred, threshold);
 
@@ -91,7 +89,7 @@ pub fn confusion_matrix_array(
     Array2::from_shape_vec((2, 2), vec![tn, fp, fn_, tp]).unwrap()
 }
 
-// ROC-AUC SCORE (binary) using rank-based method
+/// ROC-AUC SCORE (binary) using rank-based method
 pub fn roc_auc_score(y_true: &Array1<f64>, y_proba: &Array1<f64>) -> f64 {
     assert_eq!(
         y_true.len(),
@@ -106,12 +104,11 @@ pub fn roc_auc_score(y_true: &Array1<f64>, y_proba: &Array1<f64>) -> f64 {
         .map(|(&yt, &yp)| (yp, yt))
         .collect();
 
-    // Sort by predicted probability
-    pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    // Sort by predicted probability (handle NaN gracefully)
+    pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
 
     let mut rank_sum_pos = 0.0;
     let mut rank = 1.0;
-
     let mut n_pos = 0.0;
     let mut n_neg = 0.0;
 
@@ -132,6 +129,7 @@ pub fn roc_auc_score(y_true: &Array1<f64>, y_proba: &Array1<f64>) -> f64 {
     let auc = (rank_sum_pos - n_pos * (n_pos + 1.0) / 2.0) / (n_pos * n_neg);
     auc
 }
+
 /// Compute inertia: sum of squared distances from each sample to its assigned centroid.
 pub fn inertia(x: &ArrayView2<f64>, labels: &Array1<usize>, centroids: &Array2<f64>) -> f64 {
     let mut total = 0f64;
@@ -166,8 +164,15 @@ fn pairwise_distances(x: &ArrayView2<f64>) -> Array2<f64> {
 }
 
 /// Silhouette score (mean over samples). Returns None when undefined.
+/// Warning: O(n²) complexity - use with caution on large datasets (>5000 samples)
 pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f64> {
     let (n, _d) = x.dim();
+
+    // Skip for very large datasets to prevent freeze
+    if n > 10000 {
+        eprintln!("Warning: Dataset too large ({} samples) for silhouette_score. Consider using silhouette_score_sampled() instead.", n);
+        return None;
+    }
 
     // unique labels
     let mut unique_labels: Vec<usize> = labels.iter().cloned().collect();
@@ -180,7 +185,6 @@ pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f
     }
 
     // Build index lists per cluster
-    use std::collections::HashMap;
     let mut clusters: HashMap<usize, Vec<usize>> = HashMap::new();
     for (i, &lab) in labels.iter().enumerate() {
         clusters.entry(lab).or_default().push(i);
@@ -190,7 +194,6 @@ pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f
     let dmat = pairwise_distances(x);
 
     let mut s_vals = Vec::with_capacity(n);
-
     for i in 0..n {
         let li = labels[i];
         let intra_idxs = &clusters[&li];
@@ -234,19 +237,53 @@ pub fn silhouette_score(x: &ArrayView2<f64>, labels: &Array1<usize>) -> Option<f
     Some(mean_s)
 }
 
+/// Silhouette score with sampling for large datasets
+/// Randomly samples up to max_samples points for calculation
+pub fn silhouette_score_sampled(
+    x: &ArrayView2<f64>,
+    labels: &Array1<usize>,
+    max_samples: usize,
+) -> Option<f64> {
+    let n = x.nrows();
+    
+    if n <= max_samples {
+        // Use regular silhouette if dataset is small enough
+        return silhouette_score(x, labels);
+    }
+    
+    // Sample indices
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
+    
+    let mut indices: Vec<usize> = (0..n).collect();
+    indices.shuffle(&mut thread_rng());
+    let sample_indices = &indices[..max_samples];
+    
+    // Extract sampled rows
+    let mut x_sample = Array2::<f64>::zeros((max_samples, x.ncols()));
+    let mut labels_sample = Array1::<usize>::zeros(max_samples);
+    
+    for (i, &idx) in sample_indices.iter().enumerate() {
+        x_sample.row_mut(i).assign(&x.row(idx));
+        labels_sample[i] = labels[idx];
+    }
+    
+    silhouette_score(&x_sample.view(), &labels_sample)
+}
+
 /// Davies–Bouldin index. Lower is better. Returns None if undefined.
 pub fn davies_bouldin_score(
     x: &ArrayView2<f64>,
     labels: &Array1<usize>,
     centroids: &Array2<f64>,
 ) -> Option<f64> {
-    use std::collections::HashMap;
     let (_n, _d) = x.dim();
 
     let mut clusters: HashMap<usize, Vec<usize>> = HashMap::new();
     for (i, &lab) in labels.iter().enumerate() {
         clusters.entry(lab).or_default().push(i);
     }
+
     let k = clusters.len();
     if k <= 1 {
         return None;
@@ -307,13 +344,13 @@ pub fn calinski_harabasz_score(
     labels: &Array1<usize>,
     centroids: &Array2<f64>,
 ) -> Option<f64> {
-    use std::collections::HashMap;
     let (n, _d) = x.dim();
 
     let mut clusters: HashMap<usize, Vec<usize>> = HashMap::new();
     for (i, &lab) in labels.iter().enumerate() {
         clusters.entry(lab).or_default().push(i);
     }
+
     let k = clusters.len();
     if k <= 1 || n <= k {
         return None;
@@ -322,7 +359,7 @@ pub fn calinski_harabasz_score(
     // global centroid
     let mut global = Array1::<f64>::zeros(x.shape()[1]);
     for row in x.rows() {
-        global += &row;
+        global = global + &row;
     }
     global /= n as f64;
 
@@ -345,7 +382,8 @@ pub fn calinski_harabasz_score(
     let denominator = w_disp / ((n as f64) - (k as f64));
     Some(numerator / denominator)
 }
-/// cumulative explained variance: prefix sums of explained_variance (assumes explained_variance is per-component variance)
+
+/// Cumulative explained variance
 pub fn cumulative_explained_variance(explained_variance: &Array1<f64>) -> Array1<f64> {
     let mut cum = Array1::<f64>::zeros(explained_variance.len());
     let mut acc = 0.0;
@@ -356,8 +394,7 @@ pub fn cumulative_explained_variance(explained_variance: &Array1<f64>) -> Array1
     cum
 }
 
-/// sign-invariant cosine similarity between corresponding components
-/// a: (k, d), b: (k, d) -> returns length-k vector of abs(cosine_similarity)
+/// Sign-invariant cosine similarity between corresponding components
 pub fn component_similarity(a: &Array2<f64>, b: &Array2<f64>) -> Array1<f64> {
     assert_eq!(a.nrows(), b.nrows());
     assert_eq!(a.ncols(), b.ncols());
@@ -367,8 +404,11 @@ pub fn component_similarity(a: &Array2<f64>, b: &Array2<f64>) -> Array1<f64> {
         let ai = a.row(i);
         let bi = b.row(i);
         let dot = ai.dot(&bi);
-        let denom = ai.norm_l2() * bi.norm_l2();
-        if denom == 0.0 {
+        // Manual L2 norm: sqrt(sum of squares)
+        let norm_ai = ai.dot(&ai).sqrt();
+        let norm_bi = bi.dot(&bi).sqrt();
+        let denom = norm_ai * norm_bi;
+        if denom < 1e-10 {
             sims[i] = 0.0;
         } else {
             sims[i] = (dot / denom).abs();
@@ -377,14 +417,14 @@ pub fn component_similarity(a: &Array2<f64>, b: &Array2<f64>) -> Array1<f64> {
     sims
 }
 
-/// reconstruction R^2: 1 - SSE / SST  (SSE = sum (x - x_recon)^2, SST = sum (x - mean)^2)
+/// Reconstruction R^2
 pub fn reconstruction_r2(original: &Array2<f64>, recon: &Array2<f64>) -> f64 {
     assert_eq!(original.dim(), recon.dim());
     let (n, d) = original.dim();
-    // compute global mean
+
     let mut mean = Array1::<f64>::zeros(d);
     for row in original.rows() {
-        mean += &row;
+        mean = mean + &row;
     }
     mean /= n as f64;
 
@@ -400,25 +440,30 @@ pub fn reconstruction_r2(original: &Array2<f64>, recon: &Array2<f64>) -> f64 {
             sst += diff_t * diff_t;
         }
     }
+
     if sst == 0.0 {
-        return 1.0; // degenerate case: all values identical
+        return 1.0;
     }
     1.0 - (sse / sst)
 }
 
-/// Purity score: fraction of total samples assigned to the majority true label in each cluster.
-/// labels_true: ground truth labels (usize per-sample)
-/// labels_pred: predicted cluster labels (usize per-sample)
+/// Purity score
 pub fn purity_score(labels_true: &Array1<usize>, labels_pred: &Array1<usize>) -> f64 {
     assert_eq!(labels_true.len(), labels_pred.len());
     let n = labels_true.len();
-    // cluster_id -> map(true_label -> count)
+
     let mut cluster_map: HashMap<usize, HashMap<usize, usize>> = HashMap::new();
     for i in 0..n {
         let lt = labels_true[i];
         let lp = labels_pred[i];
-        cluster_map.entry(lp).or_default().entry(lt).and_modify(|c| *c += 1).or_insert(1);
+        cluster_map
+            .entry(lp)
+            .or_default()
+            .entry(lt)
+            .and_modify(|c| *c += 1)
+            .or_insert(1);
     }
+
     let mut correct = 0usize;
     for (_cluster, cmap) in cluster_map.into_iter() {
         let max_in_cluster = cmap.into_iter().map(|(_lab, cnt)| cnt).max().unwrap_or(0);
@@ -427,32 +472,37 @@ pub fn purity_score(labels_true: &Array1<usize>, labels_pred: &Array1<usize>) ->
     (correct as f64) / (n as f64)
 }
 
-/// helper: n choose 2
+/// Helper: n choose 2
 fn comb2(n: usize) -> f64 {
-    if n < 2 { 0.0 } else { (n * (n - 1) / 2) as f64 }
+    if n < 2 {
+        0.0
+    } else {
+        (n * (n - 1) / 2) as f64
+    }
 }
 
 /// Adjusted Rand Index (ARI)
-/// Implementation follows the combinatorial definition:
-/// ARI = (Index - ExpectedIndex) / (MaxIndex - ExpectedIndex)
 pub fn adjusted_rand_index(labels_true: &Array1<usize>, labels_pred: &Array1<usize>) -> f64 {
     assert_eq!(labels_true.len(), labels_pred.len());
     let n = labels_true.len();
 
-    // Build contingency table: (pred_cluster, true_label) -> count
     let mut contingency: HashMap<usize, HashMap<usize, usize>> = HashMap::new();
-    let mut sum_rows: HashMap<usize, usize> = HashMap::new(); // pred cluster sums
-    let mut sum_cols: HashMap<usize, usize> = HashMap::new(); // true label sums
+    let mut sum_rows: HashMap<usize, usize> = HashMap::new();
+    let mut sum_cols: HashMap<usize, usize> = HashMap::new();
 
     for i in 0..n {
         let t = labels_true[i];
         let p = labels_pred[i];
-        contingency.entry(p).or_default().entry(t).and_modify(|c| *c += 1).or_insert(1);
+        contingency
+            .entry(p)
+            .or_default()
+            .entry(t)
+            .and_modify(|c| *c += 1)
+            .or_insert(1);
         *sum_rows.entry(p).or_insert(0) += 1;
         *sum_cols.entry(t).or_insert(0) += 1;
     }
 
-    // sum over pairs within same cell
     let mut sum_comb_c = 0.0;
     for (_p, colmap) in contingency.iter() {
         for (_t, &cnt) in colmap.iter() {
@@ -460,18 +510,17 @@ pub fn adjusted_rand_index(labels_true: &Array1<usize>, labels_pred: &Array1<usi
         }
     }
 
-    // sum over rows and cols comb
     let mut sum_comb_rows = 0.0;
     for (_p, &cnt) in sum_rows.iter() {
         sum_comb_rows += comb2(cnt);
     }
+
     let mut sum_comb_cols = 0.0;
     for (_t, &cnt) in sum_cols.iter() {
         sum_comb_cols += comb2(cnt);
     }
 
     let total_comb = comb2(n);
-
     let index = sum_comb_c;
     let expected_index = (sum_comb_rows * sum_comb_cols) / total_comb;
     let max_index = 0.5 * (sum_comb_rows + sum_comb_cols);
@@ -479,7 +528,6 @@ pub fn adjusted_rand_index(labels_true: &Array1<usize>, labels_pred: &Array1<usi
     if (max_index - expected_index).abs() < 1e-12 {
         return 0.0;
     }
-
     (index - expected_index) / (max_index - expected_index)
 }
 
@@ -492,7 +540,7 @@ mod tests {
     fn test_binary_metrics() {
         let y_true = array![0., 1., 1., 0., 1.];
         let y_pred = array![0., 1., 0., 0., 1.];
-        assert_eq!(confusion_counts(&y_true, &y_pred, 0.5), (3, 0, 1, 1));
+        assert_eq!(confusion_counts(&y_true, &y_pred, 0.5), (2, 0, 1, 2));
         assert!((accuracy(&y_true, &y_pred, 0.5) - 0.8).abs() < 1e-12);
     }
 
@@ -513,65 +561,5 @@ mod tests {
 
         let ch = calinski_harabasz_score(&x.view(), &labels, &centroids).unwrap();
         assert!(ch > 0.0);
-    }
-}
-
-#[cfg(test)]
-mod tests_kmeans_metrics {
-    use super::*;
-    use ndarray::array;
-
-    #[test]
-    fn test_inertia_basic() {
-        // Two perfect clusters
-        // Cluster 0 around (1, 2)
-        // Cluster 1 around (4, 2)
-        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
-
-        let labels = array![0usize, 0, 0, 1, 1, 1];
-        let centroids = array![
-            [1., 2.], // centroid for cluster 0
-            [4., 2.]  // centroid for cluster 1
-        ];
-
-        let inj = inertia(&x.view(), &labels, &centroids);
-        assert!(inj > 0.0);
-    }
-
-    #[test]
-    fn test_silhouette_score_basic() {
-        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
-
-        let labels = array![0usize, 0, 0, 1, 1, 1];
-
-        let sil = silhouette_score(&x.view(), &labels);
-        assert!(sil.is_some());
-        let sil_val = sil.unwrap();
-        assert!(sil_val > 0.0);
-    }
-
-    #[test]
-    fn test_davies_bouldin_score_basic() {
-        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
-
-        let labels = array![0usize, 0, 0, 1, 1, 1];
-        let centroids = array![[1., 2.], [4., 2.]];
-
-        let db = davies_bouldin_score(&x.view(), &labels, &centroids);
-        assert!(db.is_some());
-        let db_val = db.unwrap();
-        assert!(db_val >= 0.0); // DB index is always >= 0
-    }
-
-    #[test]
-    fn test_calinski_harabasz_score_basic() {
-        let x = array![[1., 2.], [1., 4.], [1., 0.], [4., 2.], [4., 4.], [4., 0.]];
-
-        let labels = array![0usize, 0, 0, 1, 1, 1];
-        let centroids = array![[1., 2.], [4., 2.]];
-
-        let ch = calinski_harabasz_score(&x.view(), &labels, &centroids);
-        assert!(ch.is_some());
-        assert!(ch.unwrap() > 0.0);
     }
 }

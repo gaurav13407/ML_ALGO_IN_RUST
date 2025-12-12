@@ -11,7 +11,7 @@ from sklearn.metrics import (
 import os
 
 
-PATH = r"../examples/KMeans_1.csv"   # change if needed
+PATH = r"../examples/KMeans_4.csv"   # change if needed
 N_CLUSTERS = 2
 RANDOM_STATE = 42
 N_INIT = 10              # safer across sklearn versions

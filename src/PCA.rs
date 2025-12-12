@@ -1,6 +1,5 @@
 use ndarray::{s, Array1, Array2, Axis};
-use ndarray_linalg::svd::SVD;
-use std::f64;
+use nalgebra::{DMatrix, SVD as NalgebraSVD};
 
 #[derive(Debug, Clone)]
 pub struct PCA {
@@ -37,13 +36,36 @@ impl PCA {
             row -= &mean;
         }
 
-        // SVD: X_centered = U * S * Vt
-        let svd = x_centered.svd(true, true)?;
-        let s = svd.s; // singular values
-        let vt = svd.v_t.expect("vt must be available");
+        // Convert ndarray to nalgebra DMatrix (column-major)
+        let mut data = vec![0.0; n_samples * n_features];
+        for i in 0..n_samples {
+            for j in 0..n_features {
+                data[i + j * n_samples] = x_centered[[i, j]];
+            }
+        }
+        let x_matrix = DMatrix::from_vec(n_samples, n_features, data);
+
+        // Perform SVD using nalgebra
+        let svd = NalgebraSVD::new(x_matrix, true, true);
+
+        // Extract singular values
+        let singular_values = svd.singular_values;
+        let mut s = Array1::<f64>::zeros(singular_values.len());
+        for i in 0..singular_values.len() {
+            s[i] = singular_values[i];
+        }
+
+        // Extract V^T (components)
+        let v_t = svd.v_t.ok_or("V^T not computed")?;
+        let mut vt_array = Array2::<f64>::zeros((n_features, n_features));
+        for i in 0..n_features {
+            for j in 0..n_features {
+                vt_array[[i, j]] = v_t[(i, j)];
+            }
+        }
 
         // components are first n_components rows of Vt
-        let comps = vt.slice(s![0..self.n_components, ..]).to_owned();
+        let comps = vt_array.slice(s![0..self.n_components, ..]).to_owned();
 
         // explained_variance: (S^2) / (n_samples - 1)
         let mut explained = Array1::<f64>::zeros(self.n_components);
@@ -120,4 +142,3 @@ impl PCA {
         mse
     }
 }
-
