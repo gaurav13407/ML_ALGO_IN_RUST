@@ -2,8 +2,35 @@
 
 A high-performance machine learning library implemented from scratch in Rust, featuring supervised learning (linear/logistic regression), unsupervised learning (K-Means clustering), and intelligent data preprocessing with automatic categorical feature handling.
 
+## 📚 Research Documentation
+
+This project includes a comprehensive **80-page research paper** documenting a complete comparative study of KNN implementation in Rust vs Python (scikit-learn). The documentation is structured as an academic research paper with 12 chapters:
+
+📖 **[View Full Documentation](docs/)**
+
+- [01_Abstract.md](docs/01_Abstract.md) - Executive summary and key findings
+- [02_Introduction.md](docs/02_Introduction.md) - Background, motivation, and objectives
+- [03_Literature_Review.md](docs/03_Literature_Review.md) - KNN theory and Rust in scientific computing
+- [04_Methods.md](docs/04_Methods.md) - Mathematical foundations and algorithms
+- [05_Datasets.md](docs/05_Datasets.md) - Five datasets with detailed preprocessing
+- [06_System_Architecture.md](docs/06_System_Architecture.md) - Rust implementation design
+- [07_Implementation.md](docs/07_Implementation.md) - Detailed pseudocode and optimizations
+- [08_Experiments.md](docs/08_Experiments.md) - Experimental methodology and protocols
+- [09_Results.md](docs/09_Results.md) - Performance comparison and statistical analysis
+- [10_Discussion.md](docs/10_Discussion.md) - Interpretation and practical implications
+- [11_Conclusion.md](docs/11_Conclusion.md) - Summary and future work
+- [12_References.md](docs/12_References.md) - 101 citations in IEEE format
+
+**Key Findings:**
+- 🎯 Rust achieves **+3.43% higher recall** (p=0.012) with comparable accuracy
+- ⚡ Python is **3.28× faster** in prediction due to BLAS optimization
+- 💾 Rust uses **6-20× less memory** than Python
+- 🔒 Rust provides memory safety guarantees without runtime overhead
+- 📊 Statistical significance validated with paired t-tests and confidence intervals
+
 ## 🌟 What's New
 
+- **📚 Research Paper Documentation** - Complete 80-page comparative study (Rust vs Python KNN)
 - **🤖 K-Means Clustering** - Unsupervised learning with K-Means++ initialization
 - **🧠 Smart Dataset Loader** - Automatically detects and encodes categorical features
 - **📊 Multiple Datasets** - 15+ example datasets included for testing
