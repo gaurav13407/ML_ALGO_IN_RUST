@@ -266,7 +266,11 @@ ML_ALGO_Rewite/
 │   ├── Logistic_regression_3.csv
 │   ├── Logistic_regression_4.csv
 │   ├── logistic_regression_5.csv     # Diabetes dataset
-│   └── KMeans_1.csv                  # Clustering dataset
+│   ├── KMeans_1.csv                  # Clustering dataset
+│   ├── KMeans_2.csv
+│   ├── KMeans_3.csv
+│   ├── KMeans_4.csv
+│   └── KMeans_5.csv
 ├── models/              # Saved model files (JSON, CSV weights)
 │   ├── linear_model_rust.json
 │   ├── logistic_weights.csv
