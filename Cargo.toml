@@ -30,3 +30,6 @@ path="test/load_dataset.rs"
 [[bin]]
 name="load_data_1"
 path="test/load_xy_dataset.rs"
+[[bin]]
+name="PCA"
+path="test/PCA.rs"

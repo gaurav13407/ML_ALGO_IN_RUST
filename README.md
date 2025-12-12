@@ -249,11 +249,13 @@ ML_ALGO_Rewite/
 │   ├── linear_regression.rs   # Linear regression example
 │   ├── logistic_regression.rs # Logistic regression example
 │   ├── KMeans.rs              # K-Means clustering example
+│   ├── PCA.rs                 # PCA dimensionality reduction example
 │   ├── load_dataset.rs        # Dataset loader test (no target)
 │   ├── load_xy_dataset.rs     # Dataset loader test (with target)
 │   ├── linear_regression.py   # Python comparison script
 │   ├── logstic_regression.py  # Python comparison script
-│   └── KMeans.py              # Python comparison script
+│   ├── KMeans.py              # Python comparison script
+│   └── PCA.py                 # Python PCA comparison script
 ├── examples/
 │   ├── Linear_regression_1.csv       # California housing dataset
 │   ├── Linear_refression_2.csv
@@ -278,7 +280,15 @@ ML_ALGO_Rewite/
 ├── results/             # Benchmark results
 │   ├── Linear_regression_Result.csv.xlsx
 │   ├── Logsitic_regression_Result.xlsx
-│   └── KMeans_Result.xlsx
+│   ├── KMeans_Result.xlsx
+│   ├── pca_results.xlsx
+│   ├── PCA_Comparision.xlsx
+│   ├── pca_components.csv            # Python PCA components
+│   ├── pca_explained.csv             # Python explained variance
+│   ├── pca_reduced.csv               # Python reduced data
+│   ├── rust_pca_components.csv       # Rust PCA components
+│   ├── rust_pca_explained.csv        # Rust explained variance
+│   └── rust_pca_reduced.csv          # Rust reduced data
 ├── Cargo.toml          # Project configuration
 └── README.md           # This file
 ```
@@ -545,6 +555,48 @@ println!("Reconstruction MSE: {}", mse);
 | Calinski–Harabasz Score | 365.57 |
 
 **Detailed results**: See `results/KMeans_Result.xlsx`
+
+### PCA (Principal Component Analysis) Benchmarks
+
+**Dataset** (167 samples, multiple features):
+
+| Metric | Value |
+|--------|-------|
+| Full PCA Fit Time | ~XX ms |
+| Components for 95% Variance | Automatically determined |
+| Final PCA Fit Time | ~XX ms |
+| Transform Time | ~XX ms |
+
+**Detailed results**: See `results/pca_results.xlsx`
+
+## 🔬 Compare Python vs Rust PCA
+
+To verify correctness, compare the outputs side-by-side in Excel:
+
+### Python Outputs (scikit-learn)
+- `results/pca_components.csv` - Principal components (eigenvectors)
+- `results/pca_explained.csv` - Explained variance ratios and cumulative variance
+- `results/pca_reduced.csv` - Transformed data (principal component scores)
+
+### Rust Outputs (This Implementation)
+- `results/rust_pca_components.csv` - Principal components (eigenvectors)
+- `results/rust_pca_explained.csv` - Explained variance ratios and cumulative variance
+- `results/rust_pca_reduced.csv` - Transformed data (principal component scores)
+
+### Comparison Notes
+- **Numerical Accuracy**: Values should match to high precision (typically within 1e-10)
+- **Sign Ambiguity**: PCA components may flip sign between implementations - this is mathematically correct. Use absolute values for comparison.
+- **Comparison File**: See `results/PCA_Comparision.xlsx` for side-by-side analysis
+
+**How to Run:**
+```bash
+# Run Rust implementation
+cargo run --bin PCA
+
+# Run Python comparison
+cd test
+python PCA.py
+```
 
 ### Key Performance Features
 - ✅ Pure Rust implementation - no Python overhead

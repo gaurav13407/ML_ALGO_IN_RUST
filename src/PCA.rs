@@ -24,9 +24,12 @@ impl PCA {
     /// Fit PCA using SVD on centered X (shape: n_samples x n_features)
     pub fn fit(&mut self, x: &Array2<f64>) -> Result<(), Box<dyn std::error::Error>> {
         let (n_samples, n_features) = x.dim();
+        let max_components = n_samples.min(n_features);
+        
         assert!(
-            self.n_components <= n_features,
-            "n_components <= n_features required"
+            self.n_components <= max_components,
+            "n_components must be <= min(n_samples, n_features) = {}",
+            max_components
         );
 
         // compute mean and center X
@@ -50,26 +53,30 @@ impl PCA {
 
         // Extract singular values
         let singular_values = svd.singular_values;
-        let mut s = Array1::<f64>::zeros(singular_values.len());
-        for i in 0..singular_values.len() {
+        let n_singular = singular_values.len();
+        let mut s = Array1::<f64>::zeros(n_singular);
+        for i in 0..n_singular {
             s[i] = singular_values[i];
         }
 
-        // Extract V^T (components)
+        // Extract V^T (components) - V^T has shape (n_features, min(n_samples, n_features))
         let v_t = svd.v_t.ok_or("V^T not computed")?;
-        let mut vt_array = Array2::<f64>::zeros((n_features, n_features));
-        for i in 0..n_features {
-            for j in 0..n_features {
+        let (vt_rows, vt_cols) = v_t.shape();
+        
+        let mut vt_array = Array2::<f64>::zeros((vt_rows, vt_cols));
+        for i in 0..vt_rows {
+            for j in 0..vt_cols {
                 vt_array[[i, j]] = v_t[(i, j)];
             }
         }
 
         // components are first n_components rows of Vt
-        let comps = vt_array.slice(s![0..self.n_components, ..]).to_owned();
+        let n_comp_actual = self.n_components.min(vt_rows);
+        let comps = vt_array.slice(s![0..n_comp_actual, ..]).to_owned();
 
         // explained_variance: (S^2) / (n_samples - 1)
-        let mut explained = Array1::<f64>::zeros(self.n_components);
-        for i in 0..self.n_components {
+        let mut explained = Array1::<f64>::zeros(n_comp_actual);
+        for i in 0..n_comp_actual {
             let si = s[i];
             explained[i] = (si * si) / ((n_samples - 1) as f64);
         }
@@ -77,7 +84,7 @@ impl PCA {
         self.components = Some(comps);
         self.explained_variance = Some(explained);
         self.mean = Some(mean);
-        self.singular_values = Some(s.slice(s![0..self.n_components]).to_owned());
+        self.singular_values = Some(s.slice(s![0..n_comp_actual]).to_owned());
 
         Ok(())
     }

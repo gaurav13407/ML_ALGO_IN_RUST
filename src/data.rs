@@ -1,7 +1,9 @@
 use calamine::{open_workbook, Data, Reader, Xlsx};
 use csv::ReaderBuilder;
+use csv::Writer;
 use ndarray::{Array1, Array2};
 use std::{error::Error, fs::File, result};
+use crate::PCA::PCA;
 
 /// Load Excel file (.xlsx) by column name
 pub fn load_excel_by_name(
@@ -377,4 +379,84 @@ pub fn detect_categorical_columns(data: &Vec<Vec<String>>) -> Vec<bool> {
     }
 
     is_cat
+}
+
+pub fn save_array2_to_csv(path: &str, arr: &Array2<f64>, headers: Option<Vec<String>>) -> Result<(), Box<dyn Error>> {
+    let mut wtr = Writer::from_path(path)?;
+
+    if let Some(h) = headers {
+        wtr.write_record(h)?;
+    }
+
+    for row in arr.outer_iter() {
+        let row_vals: Vec<String> = row.iter().map(|v| v.to_string()).collect();
+        wtr.write_record(row_vals)?;
+    }
+
+    wtr.flush()?;
+    Ok(())
+}
+
+
+
+pub fn export_components_csv(pca: &PCA, feature_names: &[String]) -> Result<(), Box<dyn Error>> {
+    let comps = pca.components.as_ref().unwrap(); // (k, d)
+    let (n_components, n_features) = comps.dim();
+    
+    // Only use feature names up to n_features (in case there are more names than features)
+    let mut headers = vec!["Component".to_string()];
+    headers.extend(feature_names.iter().take(n_features).cloned());
+    
+    let mut wtr = Writer::from_path("rust_pca_components.csv")?;
+    wtr.write_record(&headers)?;
+    
+    for (i, row) in comps.outer_iter().enumerate() {
+        let mut rec = vec![format!("PC{}", i + 1)];
+        rec.extend(row.iter().map(|v| v.to_string()));
+        wtr.write_record(rec)?;
+    }
+    
+    wtr.flush()?;
+    Ok(())
+}
+
+pub fn export_explained_csv(pca: &PCA, x: &Array2<f64>) -> Result<(), Box<dyn Error>> {
+    let explained = pca.explained_variance.as_ref().unwrap();
+    let ratio = pca.explained_variance_ratio(x);
+    
+    let mut cumulative = 0.0;
+    let mut wtr = Writer::from_path("rust_pca_explained.csv")?;
+    
+    wtr.write_record(&["Component", "ExplainedVariance", "ExplainedVarianceRatio", "CumulativeVariance"])?;
+
+    for i in 0..explained.len() {
+        cumulative += ratio[i];
+        wtr.write_record(&[
+            format!("PC{}", i + 1),
+            explained[i].to_string(),
+            ratio[i].to_string(),
+            cumulative.to_string(),
+        ])?;
+    }
+
+    wtr.flush()?;
+    Ok(())
+}
+
+pub fn export_reduced_csv(path: &str, reduced: &Array2<f64>) -> Result<(), Box<dyn Error>> {
+    let mut wtr = Writer::from_path(path)?;
+    
+    // Write header
+    let n_components = reduced.ncols();
+    let headers: Vec<String> = (1..=n_components).map(|i| format!("PC{}", i)).collect();
+    wtr.write_record(&headers)?;
+    
+    // Write data rows
+    for row in reduced.outer_iter() {
+        let row_vals: Vec<String> = row.iter().map(|v| v.to_string()).collect();
+        wtr.write_record(row_vals)?;
+    }
+    
+    wtr.flush()?;
+    Ok(())
 }
